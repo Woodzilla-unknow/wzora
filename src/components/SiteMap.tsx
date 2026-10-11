@@ -9,9 +9,10 @@ import { useOverlay } from "./overlay";
  * each section hangs on its own radial thread, and its pages branch off
  * further out. Every node is a link and shows whether its information is in
  * yet. The web spins itself in when opened and trembles when a node is
- * touched. On narrow screens it shows sections only (their pages are listed
- * on each section's own page), stretched taller to use the screen, with
- * labels above or below their dots so they never run off the sides.
+ * touched. When there is not enough room for the pages' labels (narrow or
+ * short screens) it shows sections only (their pages are listed on each
+ * section's own page), stretched to use the space: taller on narrow screens,
+ * with labels above or below their dots, wider on short ones.
  */
 
 type Node = {
@@ -34,12 +35,14 @@ const RINGS = [0.14, 0.27, 0.4, 0.53, 0.66, 0.79, 0.92, 1.04];
 /** Small, repeatable irregularity so the web looks spun rather than plotted. */
 const jitter = (a: number, b: number) => Math.sin(a * 12.9898 + b * 78.233) * 0.5;
 
-function alignFor(angle: number, compact: boolean): Node["align"] {
-  if (compact) {
-    // Labels sit above or below their dots, except the pair near the bottom,
-    // which would collide; those go out to the sides.
-    if (Math.sin(angle) > 0.6 && Math.abs(Math.cos(angle)) > 0.2) return Math.cos(angle) > 0 ? "right" : "left";
-    return Math.sin(angle) < -0.2 ? "top" : "bottom";
+function alignFor(angle: number, narrow: boolean): Node["align"] {
+  if (narrow) {
+    // Labels sit above or below their dots, except the upper-side and bottom
+    // pairs, which would collide with their neighbours; those go out to the sides.
+    const c = Math.cos(angle);
+    const sn = Math.sin(angle);
+    if ((Math.abs(c) > 0.6 && sn < 0) || (sn > 0.6 && Math.abs(c) > 0.2)) return c > 0 ? "right" : "left";
+    return sn < -0.2 ? "top" : "bottom";
   }
   const c = Math.cos(angle);
   if (c > 0.35) return "right";
@@ -48,12 +51,23 @@ function alignFor(angle: number, compact: boolean): Node["align"] {
 }
 
 function buildWeb(sections: Section[], w: number, h: number): Web {
-  const compact = w < 640;
+  const narrow = w < 640;
+  // Pages only get their own nodes when the web is big enough for their labels.
+  const full = !narrow && Math.min(w / 2 - 160, h / 2 - 36) >= 230;
   const cx = w / 2;
   const cy = h / 2;
   // Radii across and down; a circle on wide screens, taller on narrow ones.
-  const rx = compact ? Math.max(70, w / 2 - 62) : Math.max(70, Math.min(w / 2 - 160, h / 2 - 36));
-  const ry = compact ? Math.max(70, Math.min(h / 2 - 44, rx * 2)) : rx;
+  let rx: number;
+  let ry: number;
+  if (narrow) {
+    rx = Math.max(70, w / 2 - 62);
+    ry = Math.max(70, Math.min(h / 2 - 44, rx * 2));
+  } else if (full) {
+    rx = ry = Math.min(w / 2 - 160, h / 2 - 36);
+  } else {
+    ry = Math.max(70, h / 2 - 36);
+    rx = Math.max(70, Math.min(w / 2 - 150, ry * 1.5));
+  }
   const n = sections.length;
   const perSection = 3;
   const N = n * perSection;
@@ -85,15 +99,15 @@ function buildWeb(sections: Section[], w: number, h: number): Web {
   });
 
   const nodes: Node[] = [
-    { key: "centre", href: "/", x: cx, y: cy, label: site.name, kind: "centre", section: "", done: true, align: "bottom" },
+    { key: "centre", href: "/", x: cx, y: cy, label: site.name, kind: "centre", section: "", done: true, align: narrow ? "top" : "bottom" },
   ];
   const branches: Web["branches"] = [];
   sections.forEach((s, i) => {
     const angle = angleOf(i * perSection);
-    const [sx, sy] = at(angle, compact ? 0.7 : 0.47);
+    const [sx, sy] = at(angle, full ? 0.47 : 0.7);
     const done = Boolean(s.body) || Boolean(s.items?.some((it) => it.body));
-    nodes.push({ key: s.id, href: hrefFor(s), x: sx, y: sy, index: s.index, label: s.label, kind: "section", section: s.id, done, align: alignFor(angle, compact) });
-    if (compact || !s.items) return;
+    nodes.push({ key: s.id, href: hrefFor(s), x: sx, y: sy, index: s.index, label: s.label, kind: "section", section: s.id, done, align: alignFor(angle, narrow) });
+    if (!full || !s.items) return;
     const sector = (2 * Math.PI) / n;
     const step = (sector * 0.8) / s.items.length;
     s.items.forEach((item, j) => {
@@ -238,7 +252,7 @@ export function SiteMap({ sections }: { sections: Section[] }) {
 
             <p className="map-legend">
               <span>
-                <span className="map-status is-done" /> Information published
+                <span className="map-status is-done" /> Published
               </span>
               <span>
                 <span className="map-status" /> Not complete yet

@@ -22,6 +22,11 @@ export type Section = {
   title: string;
   body: string[] | null;
   items?: Item[];
+  /**
+   * Short blocks for the boxes around the shape in this section's scene on the
+   * front page. Defaults to the section's items, or to three empty boxes.
+   */
+  highlights?: Item[];
 };
 
 /** Anchor of a card (item) on its section's page. */

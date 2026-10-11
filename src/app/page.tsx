@@ -1,42 +1,20 @@
-import { Polytope4D } from "@/components/Polytope4D";
-import { site } from "@/content/site";
+import { HeroScenes } from "@/components/HeroScenes";
+import { sections, site } from "@/content/site";
 
 /*
- * The front page is one scroll-driven scene. The hero is several screens tall
- * (the scroll track); its stage stays pinned while you scroll through it, and
- * the scroll position drives the 4D shape: it assembles, then turns.
+ * The front page is one pinned stage with a scene per scroll step: the hero,
+ * then one scene per section. The track is one screen tall per scene, with a
+ * snap point at each, so every scroll lands cleanly on a scene.
  */
 export default function Home() {
+  const scenes = sections.length + 1;
   return (
     <main>
-      <section className="hero" aria-label={site.name} data-scroll-track>
-        <div className="hero-stage">
-          <span className="hero-corner tl" aria-hidden="true" />
-          <span className="hero-corner tr" aria-hidden="true" />
-          <span className="hero-corner bl" aria-hidden="true" />
-          <span className="hero-corner br" aria-hidden="true" />
-
-          <Polytope4D className="hero-shape" revealSelector=".hero-word-solid" fitTop={64} />
-          <h1 className="hero-word" aria-label={site.name}>
-            {/* Two identical layers: wire outlines, and a solid copy on top that
-                the 4D shape reveals wherever a white region passes behind it. */}
-            {(["outline", "solid"] as const).map((layer) => (
-              <span key={layer} className={`hero-word-layer hero-word-${layer}`} aria-hidden="true">
-                {site.name.split("").map((ch, i) => (
-                  <span key={i} style={{ animationDelay: `${0.5 + i * 0.08}s` }}>
-                    {ch}
-                  </span>
-                ))}
-              </span>
-            ))}
-          </h1>
-          <p className="hero-tagline">{site.tagline}</p>
-
-          <p className="scroll-cue" aria-hidden="true">
-            <span>Scroll to begin</span>
-            <span className="scroll-line" />
-          </p>
-        </div>
+      <section className="hero" aria-label={site.name} data-scroll-track style={{ height: `${scenes * 100}svh` }}>
+        {Array.from({ length: scenes }, (_, i) => (
+          <span key={i} className="scene-snap" style={{ top: `${i * 100}svh` }} aria-hidden="true" />
+        ))}
+        <HeroScenes sections={sections} />
       </section>
     </main>
   );

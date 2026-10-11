@@ -623,11 +623,22 @@ kbd {
   outline: none;
 }
 
+/* Narrow screens: shorter labels so the web's neighbours never collide. */
+@media (max-width: 640px) {
+  .web-node.is-section .web-label {
+    font-size: 13px;
+  }
+  .web-node .web-index {
+    display: none;
+  }
+}
+
 .web-node[data-align="right"] .web-label { left: 12px; top: 0; transform: translateY(-50%); }
 .web-node[data-align="left"] .web-label { right: 12px; top: 0; transform: translateY(-50%); }
 .web-node[data-align="top"] .web-label { left: 0; bottom: 12px; transform: translateX(-50%); }
 .web-node[data-align="bottom"] .web-label { left: 0; top: 14px; transform: translateX(-50%); }
 .web-node.is-centre[data-align="bottom"] .web-label { top: 20px; }
+.web-node.is-centre[data-align="top"] .web-label { bottom: 20px; }
 
 .map-status {
   align-self: center;
@@ -728,14 +739,31 @@ kbd {
 
 /* ───────────────────────── Hero ───────────────────────── */
 
-/* The hero is a scroll track several screens tall; its stage stays pinned
-   while you scroll through it, and the scroll drives the 4D shape. */
+/* The hero is a scroll track one screen tall per scene; its stage stays
+   pinned while you scroll through it, and each scroll step snaps to a scene. */
+html:has([data-scroll-track]) {
+  scroll-snap-type: y proximity;
+}
+
 .hero {
   position: relative;
-  height: 320svh;
+}
+
+.scene-snap {
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 100svh;
+  scroll-snap-align: start;
+  pointer-events: none;
 }
 
 .hero-stage {
+  /* The frame a section scene puts the shape in (insets from the stage edges). */
+  --frame-l: 27%;
+  --frame-r: 27%;
+  --frame-t: calc(64px + 7svh);
+  --frame-b: 9svh;
   position: sticky;
   top: 0;
   height: 100svh;
@@ -823,8 +851,247 @@ kbd {
 }
 
 .hero-stage > .hero-corner,
-.hero-stage > .scroll-cue {
+.hero-stage > .scroll-cue,
+.hero-stage > .scene-frame,
+.hero-stage > .scene-title,
+.hero-stage > .scene {
   position: absolute;
+}
+
+/* ───────────────────────── Section scenes ───────────────────────── */
+
+.hero-word {
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.1, 1);
+}
+
+.polytope-name {
+  transition: opacity 0.3s ease;
+}
+
+.scene-frame {
+  left: var(--frame-l);
+  right: var(--frame-r);
+  top: var(--frame-t);
+  bottom: var(--frame-b);
+  border: 1px solid var(--fg);
+  opacity: 0;
+  transform: scale(1.03);
+  pointer-events: none;
+  transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.1, 1);
+}
+
+[data-scene="section"] .scene-frame {
+  opacity: 1;
+  transform: none;
+}
+
+/* WZORA moves to the middle of the frame and shrinks a little. */
+[data-scene="section"] .hero-word {
+  transform: translateY(calc((var(--frame-t) - var(--frame-b)) / 2 + 12px)) scale(0.78);
+}
+
+[data-scene="section"] .hero-tagline {
+  max-height: 0;
+  margin: 0;
+  padding-block: 0;
+  opacity: 0;
+}
+
+[data-scene="section"] .scroll-cue,
+[data-scene="section"] .polytope-name {
+  opacity: 0;
+}
+
+.scene-title {
+  left: calc(var(--gutter) + 22px);
+  top: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: clamp(1.5rem, 2.6vw, 2.6rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  animation: scene-in 0.6s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+}
+
+.scene-count {
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+
+/* On wide screens the scene's pieces are placed around the frame. */
+.scene {
+  inset: 0;
+  pointer-events: none;
+  text-align: left;
+}
+
+.scene > * {
+  position: absolute;
+  pointer-events: auto;
+  animation: scene-in 0.6s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+}
+
+@keyframes scene-in {
+  from { opacity: 0; transform: translateY(14px); }
+}
+
+.scene-intro {
+  left: calc(var(--frame-l) + 1px);
+  top: calc(var(--frame-t) + 1px);
+  max-width: min(420px, calc((100% - var(--frame-l) - var(--frame-r)) * 0.55));
+  padding: 20px 22px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.scene-intro h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 2vw, 1.9rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.scene-open {
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scene-open:hover {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.scene-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: var(--bg);
+  border: 1px solid var(--fg);
+}
+
+.scene-box h3 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.scene-box-index {
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.scene-box .placeholder {
+  align-items: flex-start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 12px;
+}
+
+.scene-box .placeholder-dot {
+  margin-top: 0.6em;
+}
+
+/* Box positions: one on the left, two on the right (four boxes: two each side). */
+.scene-box.at-0 {
+  left: var(--gutter);
+  top: 40svh;
+  width: calc(var(--frame-l) - var(--gutter) - 32px);
+}
+
+.scene-box.at-1 {
+  right: calc(var(--gutter) + 16px);
+  top: calc(var(--frame-t) + 4svh);
+  width: calc(var(--frame-r) - var(--gutter) - 48px);
+}
+
+.scene-box.at-2 {
+  right: var(--gutter);
+  bottom: var(--frame-b);
+  width: calc(var(--frame-r) - var(--gutter) - 32px);
+}
+
+.scene-box.at-3 {
+  left: calc(var(--gutter) + 16px);
+  bottom: var(--frame-b);
+  width: calc(var(--frame-l) - var(--gutter) - 48px);
+}
+
+.scene[data-boxes="4"] .scene-box.at-0 {
+  top: calc(var(--frame-t) + 10svh);
+}
+
+/* Narrow screens: frame on top, the intro and boxes in a swipeable row below. */
+@media (max-width: 820px) {
+  .hero-stage {
+    --frame-l: var(--gutter);
+    --frame-r: var(--gutter);
+    --frame-t: 132px;
+    --frame-b: 40svh;
+  }
+
+  [data-scene="section"] .hero-corner {
+    opacity: 0;
+  }
+
+  .scene-title {
+    left: var(--gutter);
+    top: 80px;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 1.5rem;
+  }
+
+  .scene {
+    inset: auto 0 16px 0;
+    height: calc(var(--frame-b) - 32px);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 0 var(--gutter);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--gutter);
+    pointer-events: auto;
+  }
+
+  .scene > *,
+  .scene-box.at-0,
+  .scene-box.at-1,
+  .scene-box.at-2,
+  .scene-box.at-3 {
+    position: static;
+    flex: 0 0 min(78%, 320px);
+    width: auto;
+    max-height: 100%;
+    overflow-y: auto;
+    scroll-snap-align: start;
+  }
+
+  .scene-intro {
+    max-width: none;
+    border: 1px solid var(--line-strong);
+  }
 }
 
 .hero-word {
@@ -861,7 +1128,9 @@ kbd {
 }
 
 .hero-tagline {
+  max-height: 60px;
   margin: clamp(20px, 3vw, 36px) 0 0;
+  overflow: hidden;
   /* Backed with the page colour so the 4D dot field never runs through it. */
   padding: 6px 12px;
   background: var(--bg);
@@ -870,7 +1139,13 @@ kbd {
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--muted);
-  animation: fade 1s ease 1.6s both;
+  animation: intro 1s ease 1.6s both;
+  transition: max-height 0.5s ease, margin 0.5s ease, padding 0.5s ease, opacity 0.3s ease;
+}
+
+/* Fades in without touching `opacity`, so scenes can still fade it out. */
+@keyframes intro {
+  from { filter: opacity(0); }
 }
 
 .scroll-cue {
@@ -888,8 +1163,7 @@ kbd {
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--muted);
-  /* Gone once the visitor has started scrolling. */
-  opacity: calc(1 - var(--progress, 0) * 14);
+  transition: opacity 0.3s ease;
 }
 
 .scroll-cue > span {
