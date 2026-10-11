@@ -6,6 +6,10 @@ import { useEffect, useRef, useState } from "react";
  * A wireframe 4D polytope, rotated in four dimensions and projected down to
  * the screen. Only the edges are drawn, as lines on the plain background.
  *
+ * The shape resizes itself every frame to the largest size that still fits
+ * the visible area, so it is never cropped on any screen: it shrinks quickly
+ * when its turning outline is about to overflow and grows back slowly.
+ *
  * The polytope depends on the screen width:
  *   phones   → 8-cell  (tesseract)
  *   tablets  → 16-cell
@@ -136,6 +140,12 @@ const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 
 const EDGE_DURATION = 1.4;
 const MAX_STAGGER = 1.1;
 
+// Auto-fit: CSS pixels kept clear around the shape, and how fast (seconds)
+// it shrinks to avoid overflowing or grows back into free space.
+const FIT_MARGIN = 30;
+const FIT_SHRINK = 0.25;
+const FIT_GROW = 1.2;
+
 // Dot field: one dot per DOT_SPACING CSS pixels, at most DOT_MAX × spacing in radius.
 const DOT_SPACING = 11;
 const DOT_MAX = 0.4;
@@ -166,9 +176,11 @@ type Props = {
   className?: string;
   /** Element revealed (via clip-path) wherever a "solid" region passes behind it. */
   revealSelector?: string;
+  /** CSS pixels at the top covered by something else (a fixed header), kept out of the fit. */
+  fitTop?: number;
 };
 
-export function Polytope4D({ className, revealSelector }: Props) {
+export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [name, setName] = useState("");
 
@@ -236,7 +248,9 @@ export function Polytope4D({ className, revealSelector }: Props) {
     };
     setShape(shapeForWidth(window.innerWidth), reducedMotion);
 
-    let size = 0;
+    let fit = 0; // current scale, device pixels per unit
+    let snapFit = true; // jump straight to the fitted size (first frame, resize)
+    let lastDt = 0;
     let dpr = 1;
     let rgb = readColor(document.documentElement);
     let frame = 0;
@@ -256,8 +270,7 @@ export function Polytope4D({ className, revealSelector }: Props) {
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       dpr = Math.min(window.devicePixelRatio || 1, 2);
-      // Sized off the longer side so the shape spills past the screen edges.
-      size = Math.max(rect.width, rect.height);
+      snapFit = true;
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
       gw = Math.ceil(rect.width / DOT_SPACING);
@@ -273,6 +286,7 @@ export function Polytope4D({ className, revealSelector }: Props) {
 
     const step = (dt: number) => {
       t += dt;
+      lastDt = dt;
       for (let e = 0; e < E; e++) {
         if (presence[e] === target[e]) continue;
         if (delay[e] > 0) {
@@ -289,13 +303,20 @@ export function Polytope4D({ className, revealSelector }: Props) {
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
       const [r, g, b] = rgb;
-      const scale = (size * dpr) / 2 / 1.25;
       const cx = w / 2;
-      const cy = h / 2;
+      const cy = (h + fitTop * dpr) / 2;
 
-      // Rotate in 4D, then perspective-project 4D → 3D → 2D.
+      vertexPresence.fill(0);
+      for (let e = 0; e < E; e++) {
+        eased[e] = easeInOut(presence[e]);
+        const [a, c] = edges[e];
+        vertexPresence[a] = Math.max(vertexPresence[a], eased[e]);
+        vertexPresence[c] = Math.max(vertexPresence[c], eased[e]);
+      }
+
+      // Rotate in 4D, then perspective-project 4D → 3D → 2D (in units for now).
       const tilt = 0.45 + Math.sin(t * 0.2) * 0.15;
-      const projected = VERTICES.map((src) => {
+      const unit = VERTICES.map((src) => {
         const v = [...src] as Vec4;
         rotate(v, 0, 3, t * 0.31); // XW
         rotate(v, 1, 3, t * 0.23); // YW
@@ -310,16 +331,24 @@ export function Polytope4D({ className, revealSelector }: Props) {
         z = y * Math.sin(tilt) + z * Math.cos(tilt);
         y = y2;
         const k3 = 6 / (6 - z);
-        return { x: cx + x * k3 * scale, y: cy + y * k3 * scale, X: x, Y: y, Z: z, W: v[3] };
+        return { u: x * k3, v: y * k3, X: x, Y: y, Z: z, W: v[3] };
       });
 
-      vertexPresence.fill(0);
-      for (let e = 0; e < E; e++) {
-        eased[e] = easeInOut(presence[e]);
-        const [a, c] = edges[e];
-        vertexPresence[a] = Math.max(vertexPresence[a], eased[e]);
-        vertexPresence[c] = Math.max(vertexPresence[c], eased[e]);
-      }
+      // Auto-fit: scale the shape's current outline into the free area.
+      let ex = 0.3;
+      let ey = 0.3;
+      unit.forEach((p, i) => {
+        if (vertexPresence[i] < 0.05) return;
+        ex = Math.max(ex, Math.abs(p.u));
+        ey = Math.max(ey, Math.abs(p.v));
+      });
+      const margin = FIT_MARGIN * dpr;
+      const want = Math.max(0, Math.min((w / 2 - margin) / ex, (h - fitTop * dpr) / 2 / ey - margin / ey));
+      if (snapFit || !fit) fit = want;
+      else fit += (want - fit) * (1 - Math.exp(-lastDt / (want < fit ? FIT_SHRINK : FIT_GROW)));
+      snapFit = false;
+
+      const projected = unit.map((p) => ({ ...p, x: cx + p.u * fit, y: cy + p.v * fit }));
 
       // The white regions belong to whichever shape is most present. Mid-morph,
       // they fade out and back in as one shape hands over to the next.

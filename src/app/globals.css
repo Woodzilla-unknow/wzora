@@ -239,6 +239,21 @@ section[id] {
   color: var(--muted);
 }
 
+/* Narrow phones: the shape name moves up beside the top-left corner, clear of the scroll cue. */
+@media (max-width: 560px) {
+  .polytope-name {
+    top: 92px;
+    bottom: auto;
+  }
+}
+
+/* Short screens (landscape phones): no room for the scroll cue. */
+@media (max-height: 560px) {
+  .scroll-cue {
+    display: none;
+  }
+}
+
 .hero > :not(.hero-shape) {
   position: relative;
   z-index: 1;
@@ -251,7 +266,7 @@ section[id] {
 
 .hero-word {
   margin: 0;
-  font-size: clamp(3.25rem, 12vw, 11rem);
+  font-size: clamp(2.75rem, min(14vw, 17svh), 11rem);
   font-weight: 600;
   line-height: 0.82;
   letter-spacing: -0.045em;
