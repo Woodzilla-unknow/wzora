@@ -468,77 +468,63 @@ kbd {
   }
 }
 
-/* The web fills the panel; threads are SVG, nodes are links laid over them. */
+/* The map fills the panel: straight lines (SVG) from WZORA to each section
+   and from each section to its pages, with the nodes as links laid over them. */
 .map-panel {
   height: min(780px, calc(100svh - 110px));
 }
 
-.map-web {
+.map-graph {
   position: relative;
   flex: 1;
   min-height: 320px;
   overflow: hidden;
 }
 
-.map-web svg {
+.map-graph svg {
   position: absolute;
   inset: 0;
   fill: none;
   stroke: var(--fg);
   stroke-linecap: round;
-  transform-origin: 50% 50%;
 }
 
-.map-web svg.is-trembling {
-  animation: web-tremble 0.7s ease-out;
-}
-
-@keyframes web-tremble {
-  20% { transform: rotate(0.5deg) scale(1.004); }
-  45% { transform: rotate(-0.35deg); }
-  70% { transform: rotate(0.15deg); }
-}
-
-.web-spoke,
-.web-ring,
-.web-branch {
+.map-line {
+  stroke-opacity: 0.55;
+  stroke-width: 1;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: web-draw 0.9s cubic-bezier(0.3, 0.6, 0.2, 1) forwards;
+  animation: line-draw 0.7s cubic-bezier(0.3, 0.6, 0.2, 1) forwards;
   transition: stroke-opacity 0.25s ease, stroke-width 0.25s ease;
 }
 
-.web-spoke { stroke-opacity: 0.22; stroke-width: 0.8; }
-.web-spoke.is-section { stroke-opacity: 0.6; stroke-width: 1; }
-.web-ring { stroke-opacity: 0.3; stroke-width: 0.8; }
-.web-branch { stroke-opacity: 0.65; stroke-width: 1; }
-
-.map-web.has-hot .web-spoke,
-.map-web.has-hot .web-ring,
-.map-web.has-hot .web-branch {
-  stroke-opacity: 0.12;
+.map-line.is-page {
+  stroke-opacity: 0.35;
 }
 
-.map-web .web-spoke.is-hot,
-.map-web .web-branch.is-hot {
+.map-graph.has-hot .map-line {
+  stroke-opacity: 0.15;
+}
+
+.map-graph .map-line.is-hot {
   stroke-opacity: 1;
   stroke-width: 1.6;
 }
 
-@keyframes web-draw {
+@keyframes line-draw {
   to { stroke-dashoffset: 0; }
 }
 
-/* A node: a zero-size anchor at its point on the web, with the dot centred
+/* A node: a zero-size anchor at its point on the map, with the dot centred
    on it and the label set off to whichever side faces outward. */
-.web-node {
+.map-node {
   position: absolute;
   width: 0;
   height: 0;
   animation: fade 0.5s ease both;
 }
 
-.web-dot {
+.map-dot {
   position: absolute;
   left: 0;
   top: 0;
@@ -551,27 +537,27 @@ kbd {
   transition: transform 0.2s ease;
 }
 
-.web-dot.is-done {
+.map-dot.is-done {
   background: var(--fg);
 }
 
-.web-node.is-section .web-dot {
+.map-node.is-section .map-dot {
   width: 13px;
   height: 13px;
 }
 
-.web-node.is-centre .web-dot {
+.map-node.is-centre .map-dot {
   width: 18px;
   height: 18px;
   box-shadow: 0 0 0 5px var(--bg), 0 0 0 6px var(--fg);
 }
 
-.web-node:hover .web-dot,
-.web-node:focus-visible .web-dot {
+.map-node:hover .map-dot,
+.map-node:focus-visible .map-dot {
   transform: translate(-50%, -50%) scale(1.35);
 }
 
-.web-label {
+.map-label {
   position: absolute;
   display: flex;
   align-items: baseline;
@@ -585,60 +571,60 @@ kbd {
   transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.web-node.is-section .web-label {
+.map-node.is-section .map-label {
   font-size: 15px;
   font-weight: 600;
   color: var(--fg);
 }
 
-.web-node.is-centre .web-label {
+.map-node.is-centre .map-label {
   font: 600 13px/1 var(--font-mono);
   letter-spacing: 0.24em;
   color: var(--fg);
 }
 
-.web-index {
+.map-index {
   font: 500 11px/1 var(--font-mono);
   color: var(--muted);
 }
 
-.web-node:hover .web-label,
-.web-node:focus-visible .web-label,
-.web-node.is-hot .web-label {
+.map-node:hover .map-label,
+.map-node:focus-visible .map-label,
+.map-node.is-hot .map-label {
   color: var(--fg);
 }
 
-.web-node:hover .web-label,
-.web-node:focus-visible .web-label {
+.map-node:hover .map-label,
+.map-node:focus-visible .map-label {
   background: var(--fg);
   color: var(--bg);
 }
 
-.web-node:hover .web-index,
-.web-node:focus-visible .web-index {
+.map-node:hover .map-index,
+.map-node:focus-visible .map-index {
   color: inherit;
 }
 
-.web-node:focus-visible {
+.map-node:focus-visible {
   outline: none;
 }
 
-/* Narrow screens: shorter labels so the web's neighbours never collide. */
+/* Narrow screens: shorter labels so neighbouring nodes never collide. */
 @media (max-width: 640px) {
-  .web-node.is-section .web-label {
+  .map-node.is-section .map-label {
     font-size: 13px;
   }
-  .web-node .web-index {
+  .map-node .map-index {
     display: none;
   }
 }
 
-.web-node[data-align="right"] .web-label { left: 12px; top: 0; transform: translateY(-50%); }
-.web-node[data-align="left"] .web-label { right: 12px; top: 0; transform: translateY(-50%); }
-.web-node[data-align="top"] .web-label { left: 0; bottom: 12px; transform: translateX(-50%); }
-.web-node[data-align="bottom"] .web-label { left: 0; top: 14px; transform: translateX(-50%); }
-.web-node.is-centre[data-align="bottom"] .web-label { top: 20px; }
-.web-node.is-centre[data-align="top"] .web-label { bottom: 20px; }
+.map-node[data-align="right"] .map-label { left: 12px; top: 0; transform: translateY(-50%); }
+.map-node[data-align="left"] .map-label { right: 12px; top: 0; transform: translateY(-50%); }
+.map-node[data-align="top"] .map-label { left: 0; bottom: 12px; transform: translateX(-50%); }
+.map-node[data-align="bottom"] .map-label { left: 0; top: 14px; transform: translateX(-50%); }
+.map-node.is-centre[data-align="bottom"] .map-label { top: 20px; }
+.map-node.is-centre[data-align="top"] .map-label { bottom: 20px; }
 
 .map-status {
   align-self: center;
