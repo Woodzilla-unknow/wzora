@@ -31,11 +31,17 @@ export default function Home() {
           <span className="hero-corner bl" aria-hidden="true" />
           <span className="hero-corner br" aria-hidden="true" />
 
-          <Polytope4D className="hero-shape" toneSelector=".hero-word span" />
+          <Polytope4D className="hero-shape" revealSelector=".hero-word-solid" />
           <h1 className="hero-word" aria-label={site.name}>
-            {site.name.split("").map((ch, i) => (
-              <span key={i} style={{ animationDelay: `${0.5 + i * 0.08}s` }} aria-hidden="true">
-                {ch}
+            {/* Two identical layers: wire outlines, and a solid copy on top that
+                the 4D shape reveals wherever a lit surface passes behind it. */}
+            {(["outline", "solid"] as const).map((layer) => (
+              <span key={layer} className={`hero-word-layer hero-word-${layer}`} aria-hidden="true">
+                {site.name.split("").map((ch, i) => (
+                  <span key={i} style={{ animationDelay: `${0.5 + i * 0.08}s` }}>
+                    {ch}
+                  </span>
+                ))}
               </span>
             ))}
           </h1>

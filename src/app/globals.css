@@ -249,8 +249,6 @@ section[id] {
 
 .hero-word {
   margin: 0;
-  display: flex;
-  justify-content: center;
   font-size: clamp(3.25rem, 12vw, 11rem);
   font-weight: 600;
   line-height: 0.82;
@@ -258,14 +256,28 @@ section[id] {
   clip-path: inset(0 -0.2em -0.05em -0.2em);
 }
 
-.hero-word span {
+.hero-word-layer {
+  display: flex;
+  justify-content: center;
+}
+
+.hero-word-layer span {
   display: inline-block;
-  /* Wire letters: background fill (hides the shape's lines behind them) and a
-     stroke whose tone is set live by the 4D shape (1 = full ink). */
-  color: var(--bg);
-  -webkit-text-stroke: clamp(1px, 0.12vw, 2px)
-    color-mix(in srgb, var(--fg) calc(var(--tone, 1) * 100%), var(--bg));
+  -webkit-text-stroke: clamp(1px, 0.12vw, 2px) var(--fg);
   animation: rise 1.1s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+}
+
+/* Wire letters, filled with the background so the shape's lines don't show through. */
+.hero-word-outline span {
+  color: var(--bg);
+}
+
+/* Solid letters, hidden until the 4D shape sets a clip path over them. */
+.hero-word-solid {
+  position: absolute;
+  inset: 0;
+  color: var(--fg);
+  clip-path: polygon(0 0, 0 0, 0 0);
 }
 
 .hero-tagline {
