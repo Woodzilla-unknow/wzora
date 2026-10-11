@@ -210,17 +210,48 @@ section[id] {
 .hero-corner.bl { bottom: 32px; left: var(--gutter); border-bottom-width: 1px; border-left-width: 1px; }
 .hero-corner.br { bottom: 32px; right: var(--gutter); border-bottom-width: 1px; border-right-width: 1px; }
 
-.hero-mark {
-  width: clamp(120px, 18vw, 220px);
-  height: auto;
-  margin-bottom: clamp(16px, 3vw, 32px);
+.hero-shape {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  margin: 0;
+  pointer-events: none;
+  animation: fade 2s ease 0.1s both;
+}
+
+.polytope-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.polytope-name {
+  position: absolute;
+  left: calc(var(--gutter) + 40px);
+  bottom: 40px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hero > :not(.hero-shape) {
+  position: relative;
+  z-index: 1;
+}
+
+.hero > .hero-corner,
+.hero > .scroll-cue {
+  position: absolute;
 }
 
 .hero-word {
   margin: 0;
   display: flex;
   justify-content: center;
-  font-size: clamp(4.5rem, 23vw, 26rem);
+  font-size: clamp(3.25rem, 12vw, 11rem);
   font-weight: 600;
   line-height: 0.82;
   letter-spacing: -0.045em;
@@ -229,6 +260,8 @@ section[id] {
 
 .hero-word span {
   display: inline-block;
+  /* --tone is set live by the 4D shape: 1 = full ink, lower = fades toward the background. */
+  color: color-mix(in srgb, var(--fg) calc(var(--tone, 1) * 100%), var(--bg));
   animation: rise 1.1s cubic-bezier(0.2, 0.7, 0.1, 1) both;
 }
 
@@ -273,32 +306,6 @@ section[id] {
   inset: 0;
   background: var(--fg);
   animation: scroll-line 2s cubic-bezier(0.6, 0, 0.3, 1) infinite;
-}
-
-/* Logo intro: the W and Z slide in, then the slash cuts down through them. */
-.logo-animated .logo-w {
-  animation: from-left 0.9s cubic-bezier(0.2, 0.7, 0.1, 1) 0.1s both;
-}
-.logo-animated .logo-z {
-  animation: from-right 0.9s cubic-bezier(0.2, 0.7, 0.1, 1) 0.1s both;
-}
-.logo-animated .logo-slash {
-  animation: slash 0.8s cubic-bezier(0.7, 0, 0.2, 1) 0.55s both;
-}
-
-@keyframes from-left {
-  from { opacity: 0; transform: translateX(-80px); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes from-right {
-  from { opacity: 0; transform: translateX(80px); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes slash {
-  from { opacity: 0; transform: translate(170px, -360px); }
-  to { opacity: 1; transform: none; }
 }
 
 @keyframes rise {

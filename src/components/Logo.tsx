@@ -3,7 +3,6 @@ import { useId } from "react";
 type LogoProps = {
   className?: string;
   title?: string;
-  animated?: boolean;
 };
 
 /*
@@ -23,14 +22,14 @@ const W = "255,738 337,738 498,1081 659,738 720,738 898,1120 861,1220 689,849 52
 const Z =
   "983,738 1645,738 1645,813 1128,1119 1645,1119 1645,1193 983,1193 983,1117 1497,813 983,813";
 
-export function Logo({ className, title = "WZORA", animated = false }: LogoProps) {
+export function Logo({ className, title = "WZORA" }: LogoProps) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const wMask = `w-mask-${uid}`;
   const zMask = `z-mask-${uid}`;
 
   return (
     <svg
-      className={[className, animated ? "logo-animated" : ""].filter(Boolean).join(" ")}
+      className={className}
       viewBox="230 590 1440 750"
       role="img"
       aria-label={title}
@@ -47,13 +46,9 @@ export function Logo({ className, title = "WZORA", animated = false }: LogoProps
         </mask>
       </defs>
       <g fill="currentColor">
-        <polygon className="logo-w" points={W} mask={`url(#${wMask})`} />
-        <polygon className="logo-z" points={Z} mask={`url(#${zMask})`} />
-        <path
-          className="logo-slash"
-          fillRule="evenodd"
-          d={`M${SLASH_OUTER}Z M${SLASH_INNER}Z`}
-        />
+        <polygon points={W} mask={`url(#${wMask})`} />
+        <polygon points={Z} mask={`url(#${zMask})`} />
+        <path fillRule="evenodd" d={`M${SLASH_OUTER}Z M${SLASH_INNER}Z`} />
       </g>
     </svg>
   );

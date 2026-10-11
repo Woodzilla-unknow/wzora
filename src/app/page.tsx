@@ -1,4 +1,5 @@
 import { Logo } from "@/components/Logo";
+import { Polytope4D } from "@/components/Polytope4D";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Reveal } from "@/components/Reveal";
 import { Body } from "@/components/Placeholder";
@@ -30,10 +31,10 @@ export default function Home() {
           <span className="hero-corner bl" aria-hidden="true" />
           <span className="hero-corner br" aria-hidden="true" />
 
-          <Logo className="hero-mark" animated />
+          <Polytope4D className="hero-shape" toneSelector=".hero-word span" />
           <h1 className="hero-word" aria-label={site.name}>
             {site.name.split("").map((ch, i) => (
-              <span key={i} style={{ animationDelay: `${0.9 + i * 0.08}s` }} aria-hidden="true">
+              <span key={i} style={{ animationDelay: `${0.5 + i * 0.08}s` }} aria-hidden="true">
                 {ch}
               </span>
             ))}
