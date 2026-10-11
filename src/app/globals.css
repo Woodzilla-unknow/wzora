@@ -85,7 +85,9 @@ section[id] {
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 50;
-  display: flex;
+  /* Logo left, search + site map centred, theme switch right. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 24px;
   height: 64px;
@@ -97,6 +99,7 @@ section[id] {
 }
 
 .brand {
+  justify-self: start;
   display: flex;
   align-items: center;
 }
@@ -106,48 +109,18 @@ section[id] {
   width: auto;
 }
 
-.site-nav {
-  display: flex;
-  gap: 28px;
-  margin-left: auto;
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.site-nav a {
-  position: relative;
-  color: var(--muted);
-  transition: color 0.2s ease;
-}
-
-.site-nav a::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -4px;
-  height: 1px;
-  background: var(--fg);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.3s ease;
-}
-
-.site-nav a:hover {
-  color: var(--fg);
-}
-
-.site-nav a:hover::after {
-  transform: scaleX(1);
-}
-
 .theme-toggle {
+  justify-self: end;
   display: inline-flex;
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  margin-left: 8px;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .theme-toggle button {
@@ -173,13 +146,467 @@ section[id] {
   color: var(--bg);
 }
 
-@media (max-width: 900px) {
-  .site-nav {
+/* Search button */
+.search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 8px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.search-trigger:hover {
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+
+.search-trigger svg,
+.search-field svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.search-trigger svg {
+  width: 14px;
+  height: 14px;
+}
+
+.map-trigger {
+  padding-right: 12px;
+}
+
+kbd {
+  display: inline-block;
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  color: inherit;
+}
+
+/* The smallest phones have no room for an exactly centred middle group. */
+@media (max-width: 380px) {
+  .site-header {
+    display: flex;
+  }
+  .header-center {
+    margin: 0 auto;
+  }
+}
+
+/* On wider screens the search button reads as a search bar. */
+.search-trigger:not(.map-trigger) {
+  width: clamp(220px, 24vw, 340px);
+}
+
+.search-trigger:not(.map-trigger) kbd {
+  margin-left: auto;
+}
+
+@media (max-width: 560px) {
+  .site-header {
+    gap: 12px;
+  }
+  .search-trigger,
+  .search-trigger:not(.map-trigger) {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .search-trigger-label,
+  .search-trigger kbd {
     display: none;
   }
-  .theme-toggle {
-    margin-left: auto;
+  .theme-toggle button {
+    padding: 7px 6px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
   }
+}
+
+/* ───────────────────────── Search panel ───────────────────────── */
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(80px, 12vh) var(--gutter) 24px;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: fade 0.2s ease both;
+}
+
+.search-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  max-height: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  animation: panel-in 0.3s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(-14px); }
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.search-field svg {
+  width: 22px;
+  height: 22px;
+}
+
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--fg);
+  font: 600 clamp(1.35rem, 3.2vw, 2.1rem) / 1.2 var(--font-sans);
+  letter-spacing: -0.03em;
+}
+
+.search-field input::placeholder {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.search-field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-close {
+  flex: none;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.search-close:hover {
+  color: var(--fg);
+}
+
+.search-count {
+  margin: 0;
+  padding: 14px 20px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.search-results {
+  min-height: 0;
+  margin: 0;
+  padding: 0 8px 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.search-results li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.search-results li[aria-selected="true"] {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.search-index {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.search-path {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.search-snippet {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+
+.search-snippet.is-empty {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.search-results li[aria-selected="true"] .search-snippet {
+  color: inherit;
+  opacity: 0.7;
+}
+
+.search-go {
+  font-family: var(--font-mono);
+  opacity: 0;
+}
+
+.search-results li[aria-selected="true"] .search-go {
+  opacity: 1;
+}
+
+.search-results mark {
+  padding: 0 1px;
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.search-results li[aria-selected="true"] mark {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.search-empty {
+  margin: 0;
+  padding: 16px 20px 22px;
+  color: var(--muted);
+}
+
+.search-keys {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.search-keys kbd {
+  margin-right: 4px;
+}
+
+@media (max-width: 560px) {
+  .search-keys {
+    display: none;
+  }
+}
+
+/* Site map */
+.map-panel {
+  width: min(960px, 100%);
+}
+
+.map-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.map-head h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 3.2vw, 2.1rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.map-head h2 {
+  white-space: nowrap;
+}
+
+.map-head .search-count {
+  margin-right: auto;
+  padding: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .map-head .search-count {
+    visibility: hidden;
+  }
+}
+
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  min-height: 0;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+.map-section {
+  padding: 14px 20px;
+}
+
+.map-link {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.map-index {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.map-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.map-link:hover .map-title {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.map-link .map-status {
+  align-self: center;
+}
+
+/* Pages hang off their section like a tree. */
+.map-pages {
+  margin: 8px 0 0;
+  padding: 0 0 0 6px;
+  list-style: none;
+}
+
+.map-pages li {
+  position: relative;
+  padding-left: 22px;
+}
+
+.map-pages li::before,
+.map-pages li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-left: 1px solid var(--line-strong);
+}
+
+.map-pages li::before {
+  height: 16px;
+  width: 14px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.map-pages li:not(:last-child)::after {
+  bottom: 0;
+}
+
+.map-pages a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.map-pages a:hover {
+  color: var(--fg);
+}
+
+.map-status {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+}
+
+.map-status.is-done {
+  background: var(--fg);
+  border-color: var(--fg);
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.map-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Where a search result lands: a brief outline (cards) or highlight (sections). */
+.card {
+  scroll-margin-top: 112px;
+}
+
+.card.is-target {
+  animation: target-outline 2.2s ease both;
+}
+
+.section.is-target .section-title {
+  animation: target-title 2.2s ease both;
+}
+
+@keyframes target-outline {
+  0%, 55% { outline: 2px solid var(--fg); outline-offset: -2px; }
+  100% { outline: 2px solid transparent; outline-offset: -2px; }
+}
+
+@keyframes target-title {
+  0%, 55% { background: var(--fg); color: var(--bg); }
+  100% { background: transparent; color: var(--fg); }
 }
 
 /* ───────────────────────── Hero ───────────────────────── */
@@ -399,6 +826,7 @@ section[id] {
 }
 
 .section-title {
+  width: fit-content;
   margin: 0 0 32px;
   font-size: clamp(2.5rem, 7vw, 6rem);
   font-weight: 600;

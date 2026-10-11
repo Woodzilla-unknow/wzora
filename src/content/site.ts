@@ -22,6 +22,12 @@ export type Section = {
   items?: Item[];
 };
 
+/** Page anchor for a section, or for one of its items (cards). */
+export function anchorFor(section: Section, item?: Item): string {
+  if (!item) return section.id;
+  return `${section.id}-${item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+}
+
 export const site = {
   name: "WZORA",
   tagline: "The parent company.",

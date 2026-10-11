@@ -1,9 +1,11 @@
 import { Logo } from "@/components/Logo";
 import { Polytope4D } from "@/components/Polytope4D";
+import { Search } from "@/components/Search";
+import { SiteMap } from "@/components/SiteMap";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Reveal } from "@/components/Reveal";
 import { Body } from "@/components/Placeholder";
-import { sections, site } from "@/content/site";
+import { anchorFor, sections, site } from "@/content/site";
 
 export default function Home() {
   const year = new Date().getFullYear();
@@ -14,13 +16,10 @@ export default function Home() {
         <a href="#top" className="brand" aria-label={`${site.name} — back to top`}>
           <Logo className="brand-mark" />
         </a>
-        <nav className="site-nav" aria-label="Sections">
-          {sections.map((s) => (
-            <a key={s.id} href={`#${s.id}`}>
-              {s.label}
-            </a>
-          ))}
-        </nav>
+        <div className="header-center">
+          <Search sections={sections} />
+          <SiteMap sections={sections} />
+        </div>
         <ThemeToggle />
       </header>
 
@@ -69,7 +68,7 @@ export default function Home() {
               {s.items && (
                 <div className="cards">
                   {s.items.map((item) => (
-                    <article key={item.title} className="card reveal">
+                    <article key={item.title} id={anchorFor(s, item)} className="card reveal">
                       <h3>{item.title}</h3>
                       <Body body={item.body} />
                     </article>
