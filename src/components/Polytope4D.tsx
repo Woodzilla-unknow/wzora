@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 /*
  * A wireframe 4D polytope, rotated in four dimensions and projected down to
- * the screen. Edges are drawn as lines; faces get a faint fill whose strength
- * shifts as the shape turns, so the surface keeps changing with the motion.
+ * the screen. Only the edges are drawn, as lines on the plain background; the
+ * faces are lit invisibly as the shape turns, and that lighting drives the
+ * tone of the WZORA letters.
  *
  * Optionally drives the tone of other elements (the WZORA letters): the shape is
  * split into vertical bands, one per element, and each element takes the
@@ -206,8 +207,8 @@ export function Polytope4D({ className, toneSelector }: Props) {
         return { x: cx + x * k3 * scale, y: cy + y * k3 * scale, X: x, Y: y, Z: z, W: v[3] };
       });
 
-      // Surfaces: shade each face by how it faces a light that circles over time,
-      // modulated by a wave travelling through the fourth dimension.
+      // Surfaces (not drawn): light each face by how it faces a light that circles
+      // over time, modulated by a wave travelling through the fourth dimension.
       const lx = Math.cos(t * 0.6);
       const ly = Math.sin(t * 0.45) * 0.6;
       const lz = Math.sin(t * 0.6);
@@ -220,19 +221,9 @@ export function Polytope4D({ className, toneSelector }: Props) {
         const nl = Math.hypot(nx, ny, nz) || 1;
         const light = Math.abs((nx * lx + ny * ly + nz * lz) / (nl * ll));
         const wAvg = p.reduce((s, q) => s + q.W, 0) / p.length;
-        const zAvg = p.reduce((s, q) => s + q.Z, 0) / p.length;
         const wave = 0.5 + 0.5 * Math.sin(t * 1.1 + wAvg * 4);
-        return { p, z: zAvg, alpha: 0.01 + 0.12 * light * light * wave };
+        return { p, alpha: 0.01 + 0.12 * light * light * wave };
       });
-      faces.sort((a, b) => a.z - b.z);
-      for (const f of faces) {
-        ctx.beginPath();
-        ctx.moveTo(f.p[0].x, f.p[0].y);
-        for (let i = 1; i < f.p.length; i++) ctx.lineTo(f.p[i].x, f.p[i].y);
-        ctx.closePath();
-        ctx.fillStyle = `rgba(${r},${g},${b},${f.alpha.toFixed(3)})`;
-        ctx.fill();
-      }
 
       // Edges: brighter and thicker the nearer they sit in the fourth dimension.
       ctx.lineCap = "round";
@@ -240,7 +231,7 @@ export function Polytope4D({ className, toneSelector }: Props) {
         const a = projected[i];
         const c = projected[j];
         const depth = ((a.W + c.W) / 2 + 1) / 2;
-        ctx.strokeStyle = `rgba(${r},${g},${b},${(0.14 + 0.66 * depth).toFixed(3)})`;
+        ctx.strokeStyle = `rgba(${r},${g},${b},${(0.4 + 0.6 * depth).toFixed(3)})`;
         ctx.lineWidth = (0.6 + depth * 1.4) * dpr;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);

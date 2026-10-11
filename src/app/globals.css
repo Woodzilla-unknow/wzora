@@ -260,8 +260,11 @@ section[id] {
 
 .hero-word span {
   display: inline-block;
-  /* --tone is set live by the 4D shape: 1 = full ink, lower = fades toward the background. */
-  color: color-mix(in srgb, var(--fg) calc(var(--tone, 1) * 100%), var(--bg));
+  /* Wire letters: background fill (hides the shape's lines behind them) and a
+     stroke whose tone is set live by the 4D shape (1 = full ink). */
+  color: var(--bg);
+  -webkit-text-stroke: clamp(1px, 0.12vw, 2px)
+    color-mix(in srgb, var(--fg) calc(var(--tone, 1) * 100%), var(--bg));
   animation: rise 1.1s cubic-bezier(0.2, 0.7, 0.1, 1) both;
 }
 
