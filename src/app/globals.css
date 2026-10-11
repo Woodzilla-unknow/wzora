@@ -6,7 +6,7 @@
   --muted: #5c5c5c;
   --line: rgba(0, 0, 0, 0.14);
   --line-strong: rgba(0, 0, 0, 0.6);
-  --header-bg: rgba(255, 255, 255, 0.72);
+  --header-bg: rgba(255, 255, 255, 0.86);
   --gutter: clamp(16px, 4vw, 56px);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -20,7 +20,7 @@
     --muted: #a3a3a3;
     --line: rgba(255, 255, 255, 0.16);
     --line-strong: rgba(255, 255, 255, 0.6);
-    --header-bg: rgba(0, 0, 0, 0.72);
+    --header-bg: rgba(0, 0, 0, 0.86);
     color-scheme: dark;
   }
 }
@@ -31,7 +31,7 @@
   --muted: #a3a3a3;
   --line: rgba(255, 255, 255, 0.16);
   --line-strong: rgba(255, 255, 255, 0.6);
-  --header-bg: rgba(0, 0, 0, 0.72);
+  --header-bg: rgba(0, 0, 0, 0.86);
   color-scheme: dark;
 }
 
@@ -227,8 +227,10 @@ section[id] {
 
 .polytope-name {
   position: absolute;
-  left: calc(var(--gutter) + 40px);
-  bottom: 40px;
+  padding: 4px 8px;
+  background: var(--bg);
+  left: calc(var(--gutter) + 32px);
+  bottom: 36px;
   font-family: var(--font-mono);
   font-size: 10px;
   line-height: 1;
@@ -282,6 +284,9 @@ section[id] {
 
 .hero-tagline {
   margin: clamp(20px, 3vw, 36px) 0 0;
+  /* Backed with the page colour so the 4D dot field never runs through it. */
+  padding: 6px 12px;
+  background: var(--bg);
   font-family: var(--font-mono);
   font-size: 13px;
   letter-spacing: 0.24em;
@@ -305,6 +310,11 @@ section[id] {
   text-transform: uppercase;
   color: var(--muted);
   animation: fade 1s ease 2s both;
+}
+
+.scroll-cue > span:first-child {
+  padding: 4px 8px;
+  background: var(--bg);
 }
 
 .scroll-line {

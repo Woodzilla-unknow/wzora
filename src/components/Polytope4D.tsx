@@ -16,10 +16,12 @@ import { useEffect, useRef, useState } from "react";
  * morphs into the next one instead of jumping.
  *
  * The lines also split the screen into regions, coloured alternately like a
- * checkerboard (each line flips the colour). Wherever a "solid" region passes
- * behind the `revealSelector` element (the solid WZORA layer), that part of it
- * shows through a clip path, so roughly half the word is solid at any moment,
- * always cut along the shape's own lines.
+ * checkerboard (each line flips the colour). The "white" regions are filled
+ * with a field of dots: full-size deep inside, shrinking and flickering along
+ * the borders, so black and white look like they are fighting over the
+ * surface. Wherever a white region passes behind the `revealSelector` element
+ * (the solid WZORA layer), that part of it shows through a clip path, so part
+ * of the word is solid at any moment, cut along the shape's own lines.
  */
 
 type Vec4 = [number, number, number, number];
@@ -134,6 +136,32 @@ const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 
 const EDGE_DURATION = 1.4;
 const MAX_STAGGER = 1.1;
 
+// Dot field: one dot per DOT_SPACING CSS pixels, at most DOT_MAX × spacing in radius.
+const DOT_SPACING = 11;
+const DOT_MAX = 0.4;
+
+const smoothstep = (a: number, b: number, x: number) => {
+  const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return k * k * (3 - 2 * k);
+};
+
+/** Two-pass box blur of a w×h grid, in place (`tmp` is scratch space). */
+function blur(grid: Float32Array, tmp: Float32Array, w: number, h: number, r: number) {
+  const n = 2 * r + 1;
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      let sum = 0;
+      for (let k = -r; k <= r; k++) sum += grid[y * w + Math.min(w - 1, Math.max(0, x + k))];
+      tmp[y * w + x] = sum / n;
+    }
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      let sum = 0;
+      for (let k = -r; k <= r; k++) sum += tmp[Math.min(h - 1, Math.max(0, y + k)) * w + x];
+      grid[y * w + x] = sum / n;
+    }
+}
+
 type Props = {
   className?: string;
   /** Element revealed (via clip-path) wherever a "solid" region passes behind it. */
@@ -216,6 +244,15 @@ export function Polytope4D({ className, revealSelector }: Props) {
     let t = reducedMotion ? 2.2 : 0;
     let last = performance.now();
 
+    // Low-res grid, one cell per dot, that the white regions are drawn into.
+    const field = document.createElement("canvas");
+    const fctx = field.getContext("2d", { willReadFrequently: true });
+    let gw = 0;
+    let gh = 0;
+    let cover = new Float32Array(0);
+    let scratch = new Float32Array(0);
+    let phase = new Float32Array(0);
+
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -223,6 +260,13 @@ export function Polytope4D({ className, revealSelector }: Props) {
       size = Math.max(rect.width, rect.height);
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
+      gw = Math.ceil(rect.width / DOT_SPACING);
+      gh = Math.ceil(rect.height / DOT_SPACING);
+      field.width = gw;
+      field.height = gh;
+      cover = new Float32Array(gw * gh);
+      scratch = new Float32Array(gw * gh);
+      phase = Float32Array.from({ length: gw * gh }, () => Math.random() * Math.PI * 2);
       setShape(shapeForWidth(window.innerWidth), reducedMotion);
       draw();
     };
@@ -277,6 +321,28 @@ export function Polytope4D({ className, revealSelector }: Props) {
         vertexPresence[c] = Math.max(vertexPresence[c], eased[e]);
       }
 
+      // The white regions belong to whichever shape is most present. Mid-morph,
+      // they fade out and back in as one shape hands over to the next.
+      let best: ShapeId = ids[0];
+      let bestPresence = -1;
+      for (const id of ids) {
+        let sum = 0;
+        for (const e of shapeEdges[id]) sum += eased[e];
+        const p = sum / shapeEdges[id].size;
+        if (p > bestPresence) [best, bestPresence] = [id, p];
+      }
+      const strength = Math.max(0, Math.min(1, bestPresence * 2 - 1));
+      const circuit = circuits[best];
+      const regions = new Path2D();
+      circuit.forEach((i, k) => {
+        const { x, y } = projected[i];
+        if (k) regions.lineTo(x, y);
+        else regions.moveTo(x, y);
+      });
+      regions.closePath();
+
+      drawDots(regions, strength, `rgb(${r},${g},${b})`);
+
       // Edges: brighter and thicker the nearer they sit in the fourth dimension.
       // A morphing edge is drawn partially, growing from its anchor.
       ctx.lineCap = "round";
@@ -317,27 +383,53 @@ export function Polytope4D({ className, revealSelector }: Props) {
         ctx.fill();
       }
 
-      if (reveal) updateReveal(projected);
+      if (reveal) updateReveal(projected, circuit, strength);
     };
 
-    // Clip the reveal element to the "solid" checkerboard regions of the shape
-    // that is most present. Mid-morph, the reveal fades out and back in as one
-    // shape hands over to the next.
-    const updateReveal = (projected: { x: number; y: number }[]) => {
+    // Dots fill the white regions: full-size deep inside, shrinking towards the
+    // borders, where they also flicker, so the front between black and white
+    // keeps shifting.
+    const drawDots = (regions: Path2D, strength: number, color: string) => {
+      if (!fctx || strength < 0.01 || !gw || !gh) return;
+      const S = DOT_SPACING * dpr;
+      fctx.setTransform(1, 0, 0, 1, 0, 0);
+      fctx.clearRect(0, 0, gw, gh);
+      fctx.setTransform(1 / S, 0, 0, 1 / S, 0, 0);
+      fctx.fillStyle = "#fff";
+      fctx.fill(regions, "evenodd");
+      const px = fctx.getImageData(0, 0, gw, gh).data;
+      for (let k = 0; k < cover.length; k++) cover[k] = px[k * 4 + 3] / 255;
+      blur(cover, scratch, gw, gh, 2);
+
+      const maxR = S * DOT_MAX;
+      ctx.beginPath();
+      for (let y = 0; y < gh; y++)
+        for (let x = 0; x < gw; x++) {
+          const k = y * gw + x;
+          const v = cover[k];
+          if (v < 0.02) continue;
+          const front = 4 * v * (1 - v); // 1 on the border, 0 deep inside either side
+          const flicker = 0.6 * Math.sin(t * 2.1 + phase[k]) + 0.4 * Math.sin(x * 0.55 + y * 0.45 - t * 1.3);
+          const size = smoothstep(0.3, 0.9, v + 0.5 * flicker * front) * strength;
+          if (size < 0.05) continue;
+          const cx = (x + 0.5) * S;
+          const cy = (y + 0.5) * S;
+          const rad = maxR * size;
+          ctx.moveTo(cx + rad, cy);
+          ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        }
+      ctx.fillStyle = color;
+      ctx.fill();
+    };
+
+    // Clip the reveal element to the same white regions.
+    const updateReveal = (projected: { x: number; y: number }[], circuit: number[], strength: number) => {
       if (!reveal) return;
-      let best: ShapeId = ids[0];
-      let bestPresence = -1;
-      for (const id of ids) {
-        let sum = 0;
-        for (const e of shapeEdges[id]) sum += eased[e];
-        const p = sum / shapeEdges[id].size;
-        if (p > bestPresence) [best, bestPresence] = [id, p];
-      }
       const cr = canvas.getBoundingClientRect();
       const rr = reveal.getBoundingClientRect();
       const ox = rr.left - cr.left;
       const oy = rr.top - cr.top;
-      const d = circuits[best]
+      const d = circuit
         .map((i, k) => {
           const x = (projected[i].x / dpr - ox).toFixed(1);
           const y = (projected[i].y / dpr - oy).toFixed(1);
@@ -345,7 +437,7 @@ export function Polytope4D({ className, revealSelector }: Props) {
         })
         .join("");
       reveal.style.clipPath = `path(evenodd, "${d}Z")`;
-      reveal.style.opacity = Math.max(0, Math.min(1, bestPresence * 2 - 1)).toFixed(3);
+      reveal.style.opacity = strength.toFixed(3);
     };
 
     const loop = (now: number) => {
