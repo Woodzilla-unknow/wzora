@@ -3,6 +3,8 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { site } from "@/content/site";
 import { themeInitScript } from "@/components/ThemeToggle";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -31,7 +33,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <style>{`.reveal{opacity:1;transform:none}`}</style>
         </noscript>
       </head>
-      <body>{children}</body>
+      <body>
+        <SiteHeader />
+        {children}
+        <SiteFooter />
+      </body>
     </html>
   );
 }

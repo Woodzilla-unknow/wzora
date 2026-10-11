@@ -6,6 +6,12 @@ import { useEffect, useRef, useState } from "react";
  * A wireframe 4D polytope, rotated in four dimensions and projected down to
  * the screen. Only the edges are drawn, as lines on the plain background.
  *
+ * Inside a `[data-scroll-track]` element (the front page hero), scrolling
+ * drives the scene instead of the clock: at the top only the vertices show;
+ * scrolling draws the edges in, then lets the dots in, then turns the shape
+ * through 4D. Scrolling back plays it in reverse, and nothing moves until the
+ * visitor scrolls. Outside a track, the shape simply turns on its own.
+ *
  * The shape resizes itself every frame to the largest size that still fits
  * the visible area, so it is never cropped on any screen: it shrinks quickly
  * when its turning outline is about to overflow and grows back slowly.
@@ -140,6 +146,14 @@ const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 
 const EDGE_DURATION = 1.4;
 const MAX_STAGGER = 1.1;
 
+// Scroll timeline, as fractions of the scroll track.
+const ASSEMBLE_END = 0.15; // edges fully drawn
+const DOTS_START = 0.12; // dots begin to appear…
+const DOTS_END = 0.32; // …and are fully in
+const T_START = 2; // orientation at the top of the page
+const T_RANGE = 24; // how far the shape turns over the whole track
+const SCROLL_EASE = 0.18; // seconds the shape takes to catch up with the scroll
+
 // Auto-fit: CSS pixels kept clear around the shape, and how fast (seconds)
 // it shrinks to avoid overflowing or grows back into free space.
 const FIT_MARGIN = 30;
@@ -182,6 +196,7 @@ type Props = {
 
 export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const readoutRef = useRef<HTMLSpanElement>(null);
   const [name, setName] = useState("");
 
   useEffect(() => {
@@ -255,8 +270,19 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
     let rgb = readColor(document.documentElement);
     let frame = 0;
     let visible = true;
-    let t = reducedMotion ? 2.2 : 0;
     let last = performance.now();
+
+    // Scroll-driven when inside a scroll track; otherwise driven by the clock.
+    const track = canvas.closest<HTMLElement>("[data-scroll-track]");
+    const readProgress = () => {
+      if (!track) return 1;
+      const rect = track.getBoundingClientRect();
+      const span = rect.height - window.innerHeight;
+      return span > 0 ? Math.min(1, Math.max(0, -rect.top / span)) : 0;
+    };
+    let progress = readProgress();
+    let t = track ? T_START + progress * T_RANGE : reducedMotion ? 2.2 : 0;
+    let fitSettled = false;
 
     // Low-res grid, one cell per dot, that the white regions are drawn into.
     const field = document.createElement("canvas");
@@ -284,11 +310,25 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
       draw();
     };
 
+    /** Advances the scene; returns whether anything changed. */
     const step = (dt: number) => {
-      t += dt;
       lastDt = dt;
+      let changed = false;
+      if (track) {
+        const goal = readProgress();
+        if (Math.abs(goal - progress) > 1e-4) {
+          progress += (goal - progress) * (reducedMotion ? 1 : 1 - Math.exp(-dt / SCROLL_EASE));
+          changed = true;
+        } else progress = goal;
+        t = T_START + progress * T_RANGE;
+        track.style.setProperty("--progress", progress.toFixed(4));
+      } else {
+        t += dt;
+        changed = true;
+      }
       for (let e = 0; e < E; e++) {
         if (presence[e] === target[e]) continue;
+        changed = true;
         if (delay[e] > 0) {
           delay[e] -= dt;
           continue;
@@ -296,6 +336,7 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
         const d = dt / EDGE_DURATION;
         presence[e] = target[e] ? Math.min(1, presence[e] + d) : Math.max(0, presence[e] - d);
       }
+      return changed;
     };
 
     const draw = () => {
@@ -305,6 +346,9 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
       const [r, g, b] = rgb;
       const cx = w / 2;
       const cy = (h + fitTop * dpr) / 2;
+      // Scroll timeline: how far the edges are drawn and the dots let in.
+      const assembled = track ? smoothstep(0, ASSEMBLE_END, progress) : 1;
+      const dotsIn = track ? smoothstep(DOTS_START, DOTS_END, progress) : 1;
 
       vertexPresence.fill(0);
       for (let e = 0; e < E; e++) {
@@ -347,6 +391,7 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
       if (snapFit || !fit) fit = want;
       else fit += (want - fit) * (1 - Math.exp(-lastDt / (want < fit ? FIT_SHRINK : FIT_GROW)));
       snapFit = false;
+      fitSettled = Math.abs(want - fit) < 0.25;
 
       const projected = unit.map((p) => ({ ...p, x: cx + p.u * fit, y: cy + p.v * fit }));
 
@@ -360,7 +405,7 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
         const p = sum / shapeEdges[id].size;
         if (p > bestPresence) [best, bestPresence] = [id, p];
       }
-      const strength = Math.max(0, Math.min(1, bestPresence * 2 - 1));
+      const strength = Math.max(0, Math.min(1, bestPresence * 2 - 1)) * dotsIn;
       const circuit = circuits[best];
       const regions = new Path2D();
       circuit.forEach((i, k) => {
@@ -376,7 +421,7 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
       // A morphing edge is drawn partially, growing from its anchor.
       ctx.lineCap = "round";
       for (let e = 0; e < E; e++) {
-        const k = eased[e];
+        const k = eased[e] * assembled;
         if (k < 0.002) continue;
         const [i, j] = edges[e];
         let a = projected[i];
@@ -413,6 +458,12 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
       }
 
       if (reveal) updateReveal(projected, circuit, strength);
+
+      // Instrument readout: the current rotation in each plane through the fourth axis.
+      if (readoutRef.current) {
+        const deg = (a: number) => String(Math.round((((a * 180) / Math.PI) % 360) + 360) % 360).padStart(3, "0");
+        readoutRef.current.textContent = `XW ${deg(t * 0.31)}° · YW ${deg(t * 0.23)}° · ZW ${deg(t * 0.17)}°`;
+      }
     };
 
     // Dots fill the white regions: full-size deep inside, shrinking towards the
@@ -470,14 +521,15 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
     };
 
     const loop = (now: number) => {
-      step(Math.min(now - last, 50) / 1000);
+      // Redraw only when something moved: the scroll, a morph, or the auto-fit.
+      if (step(Math.min(now - last, 50) / 1000) || !fitSettled) draw();
       last = now;
-      draw();
       frame = requestAnimationFrame(loop);
     };
 
     const start = () => {
-      if (reducedMotion || frame || !visible || document.hidden) return;
+      // With reduced motion, only a scroll track (the visitor's own scrolling) moves it.
+      if ((reducedMotion && !track) || frame || !visible || document.hidden) return;
       last = performance.now();
       frame = requestAnimationFrame(loop);
     };
@@ -520,14 +572,16 @@ export function Polytope4D({ className, revealSelector, fitTop = 0 }: Props) {
       document.removeEventListener("visibilitychange", onVisibility);
       reveal?.style.removeProperty("clip-path");
       reveal?.style.removeProperty("opacity");
+      track?.style.removeProperty("--progress");
     };
-  }, [revealSelector]);
+  }, [revealSelector, fitTop]);
 
   return (
     <figure className={className}>
       <canvas ref={canvasRef} className="polytope-canvas" aria-hidden="true" />
       <figcaption className="polytope-name" aria-hidden="true">
-        {name}
+        <span>{name}</span>
+        <span ref={readoutRef} className="polytope-readout" />
       </figcaption>
     </figure>
   );

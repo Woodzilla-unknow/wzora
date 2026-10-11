@@ -336,13 +336,12 @@ kbd {
   list-style: none;
 }
 
-.search-results li {
+.search-results li > a {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 12px;
-  cursor: pointer;
 }
 
 .search-results li[aria-selected="true"] {
@@ -469,42 +468,168 @@ kbd {
   }
 }
 
-.map-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  min-height: 0;
-  padding: 8px 0;
-  overflow-y: auto;
+/* The web fills the panel; threads are SVG, nodes are links laid over them. */
+.map-panel {
+  height: min(780px, calc(100svh - 110px));
 }
 
-.map-section {
-  padding: 14px 20px;
+.map-web {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+  overflow: hidden;
 }
 
-.map-link {
+.map-web svg {
+  position: absolute;
+  inset: 0;
+  fill: none;
+  stroke: var(--fg);
+  stroke-linecap: round;
+  transform-origin: 50% 50%;
+}
+
+.map-web svg.is-trembling {
+  animation: web-tremble 0.7s ease-out;
+}
+
+@keyframes web-tremble {
+  20% { transform: rotate(0.5deg) scale(1.004); }
+  45% { transform: rotate(-0.35deg); }
+  70% { transform: rotate(0.15deg); }
+}
+
+.web-spoke,
+.web-ring,
+.web-branch {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: web-draw 0.9s cubic-bezier(0.3, 0.6, 0.2, 1) forwards;
+  transition: stroke-opacity 0.25s ease, stroke-width 0.25s ease;
+}
+
+.web-spoke { stroke-opacity: 0.22; stroke-width: 0.8; }
+.web-spoke.is-section { stroke-opacity: 0.6; stroke-width: 1; }
+.web-ring { stroke-opacity: 0.3; stroke-width: 0.8; }
+.web-branch { stroke-opacity: 0.65; stroke-width: 1; }
+
+.map-web.has-hot .web-spoke,
+.map-web.has-hot .web-ring,
+.map-web.has-hot .web-branch {
+  stroke-opacity: 0.12;
+}
+
+.map-web .web-spoke.is-hot,
+.map-web .web-branch.is-hot {
+  stroke-opacity: 1;
+  stroke-width: 1.6;
+}
+
+@keyframes web-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* A node: a zero-size anchor at its point on the web, with the dot centred
+   on it and the label set off to whichever side faces outward. */
+.web-node {
+  position: absolute;
+  width: 0;
+  height: 0;
+  animation: fade 0.5s ease both;
+}
+
+.web-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--fg);
+  border-radius: 50%;
+  background: var(--bg);
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s ease;
+}
+
+.web-dot.is-done {
+  background: var(--fg);
+}
+
+.web-node.is-section .web-dot {
+  width: 13px;
+  height: 13px;
+}
+
+.web-node.is-centre .web-dot {
+  width: 18px;
+  height: 18px;
+  box-shadow: 0 0 0 5px var(--bg), 0 0 0 6px var(--fg);
+}
+
+.web-node:hover .web-dot,
+.web-node:focus-visible .web-dot {
+  transform: translate(-50%, -50%) scale(1.35);
+}
+
+.web-label {
+  position: absolute;
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 6px;
+  padding: 3px 6px;
+  background: var(--bg);
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--muted);
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.map-index {
-  font-family: var(--font-mono);
-  font-size: 12px;
+.web-node.is-section .web-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.web-node.is-centre .web-label {
+  font: 600 13px/1 var(--font-mono);
+  letter-spacing: 0.24em;
+  color: var(--fg);
+}
+
+.web-index {
+  font: 500 11px/1 var(--font-mono);
   color: var(--muted);
 }
 
-.map-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+.web-node:hover .web-label,
+.web-node:focus-visible .web-label,
+.web-node.is-hot .web-label {
+  color: var(--fg);
 }
 
-.map-link:hover .map-title {
-  text-decoration: underline;
-  text-underline-offset: 4px;
+.web-node:hover .web-label,
+.web-node:focus-visible .web-label {
+  background: var(--fg);
+  color: var(--bg);
 }
 
-.map-link .map-status {
+.web-node:hover .web-index,
+.web-node:focus-visible .web-index {
+  color: inherit;
+}
+
+.web-node:focus-visible {
+  outline: none;
+}
+
+.web-node[data-align="right"] .web-label { left: 12px; top: 0; transform: translateY(-50%); }
+.web-node[data-align="left"] .web-label { right: 12px; top: 0; transform: translateY(-50%); }
+.web-node[data-align="top"] .web-label { left: 0; bottom: 12px; transform: translateX(-50%); }
+.web-node[data-align="bottom"] .web-label { left: 0; top: 14px; transform: translateX(-50%); }
+.web-node.is-centre[data-align="bottom"] .web-label { top: 20px; }
+
+.map-status {
   align-self: center;
 }
 
@@ -586,7 +711,7 @@ kbd {
   gap: 8px;
 }
 
-/* Where a search result lands: a brief outline (cards) or highlight (sections). */
+/* Where a search result or site map link lands: a brief outline on the card. */
 .card {
   scroll-margin-top: 112px;
 }
@@ -595,25 +720,25 @@ kbd {
   animation: target-outline 2.2s ease both;
 }
 
-.section.is-target .section-title {
-  animation: target-title 2.2s ease both;
-}
-
 @keyframes target-outline {
   0%, 55% { outline: 2px solid var(--fg); outline-offset: -2px; }
   100% { outline: 2px solid transparent; outline-offset: -2px; }
 }
 
-@keyframes target-title {
-  0%, 55% { background: var(--fg); color: var(--bg); }
-  100% { background: transparent; color: var(--fg); }
-}
 
 /* ───────────────────────── Hero ───────────────────────── */
 
+/* The hero is a scroll track several screens tall; its stage stays pinned
+   while you scroll through it, and the scroll drives the 4D shape. */
 .hero {
   position: relative;
-  min-height: 100svh;
+  height: 320svh;
+}
+
+.hero-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -654,6 +779,9 @@ kbd {
 
 .polytope-name {
   position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   padding: 4px 8px;
   background: var(--bg);
   left: calc(var(--gutter) + 32px);
@@ -664,6 +792,14 @@ kbd {
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+/* Live rotation angles in the three planes through the fourth axis. */
+.polytope-readout {
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  opacity: 0.7;
 }
 
 /* Narrow phones: the shape name moves up beside the top-left corner, clear of the scroll cue. */
@@ -681,13 +817,13 @@ kbd {
   }
 }
 
-.hero > :not(.hero-shape) {
+.hero-stage > :not(.hero-shape) {
   position: relative;
   z-index: 1;
 }
 
-.hero > .hero-corner,
-.hero > .scroll-cue {
+.hero-stage > .hero-corner,
+.hero-stage > .scroll-cue {
   position: absolute;
 }
 
@@ -741,6 +877,7 @@ kbd {
   position: absolute;
   bottom: 40px;
   left: 50%;
+  margin: 0;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -751,7 +888,12 @@ kbd {
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--muted);
-  animation: fade 1s ease 2s both;
+  /* Gone once the visitor has started scrolling. */
+  opacity: calc(1 - var(--progress, 0) * 14);
+}
+
+.scroll-cue > span {
+  animation: fade 1s ease 1.4s both;
 }
 
 .scroll-cue > span:first-child {
@@ -792,12 +934,65 @@ kbd {
 
 /* ───────────────────────── Sections ───────────────────────── */
 
+/* A section's own page. */
+.page {
+  min-height: 100svh;
+  padding-top: 64px;
+}
+
 .section {
   display: grid;
   grid-template-columns: minmax(160px, 1fr) 3fr;
   gap: 32px var(--gutter);
   padding: clamp(72px, 12vw, 160px) var(--gutter);
+}
+
+.page-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 32px var(--gutter) clamp(48px, 8vw, 96px);
   border-top: 1px solid var(--line);
+}
+
+.page-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.page-step.is-next {
+  grid-column: 2;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.page-step-dir {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.page-step-title {
+  font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.page-step:hover .page-step-title {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+
+.page-step .section-index {
+  font-family: var(--font-mono);
+  font-size: 0.6em;
+  font-weight: 500;
+  color: var(--muted);
+  vertical-align: 0.3em;
 }
 
 .section-head {
@@ -888,6 +1083,7 @@ kbd {
   margin-top: 0.6em;
 }
 
+.card h2,
 .card h3 {
   margin: 0 0 20px;
   line-height: 1.2;

@@ -1,9 +1,11 @@
 /**
  * All website copy lives here.
  *
- * To publish information for a section, replace `body: null` with an array of
+ * Each section has its own page at /<id> (e.g. /about, /legal). To publish
+ * information for a section, replace `body: null` with an array of
  * paragraphs. Any section (or item) whose body is `null` shows the
- * "Information is not complete yet." notice instead.
+ * "Information is not complete yet." notice instead. Search and the site map
+ * read from this file, so new content shows up there automatically.
  */
 
 export const PLACEHOLDER = "Information is not complete yet.";
@@ -22,10 +24,14 @@ export type Section = {
   items?: Item[];
 };
 
-/** Page anchor for a section, or for one of its items (cards). */
-export function anchorFor(section: Section, item?: Item): string {
-  if (!item) return section.id;
+/** Anchor of a card (item) on its section's page. */
+export function anchorFor(section: Section, item: Item): string {
   return `${section.id}-${item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+}
+
+/** Link to a section's own page, or to one of its cards on that page. */
+export function hrefFor(section: Section, item?: Item): string {
+  return item ? `/${section.id}#${anchorFor(section, item)}` : `/${section.id}`;
 }
 
 export const site = {

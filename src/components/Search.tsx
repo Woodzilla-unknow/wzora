@@ -1,18 +1,19 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { anchorFor, PLACEHOLDER, type Section } from "@/content/site";
-import { goTo, useOverlay } from "./overlay";
+import { hrefFor, PLACEHOLDER, type Section } from "@/content/site";
+import { useOverlay } from "./overlay";
 
 /*
  * Site search as a command palette: a full-screen panel opened from the
  * header button, ⌘K / Ctrl+K, or "/". It searches every section and card in
  * src/content/site.ts, so new content becomes searchable as soon as it is
- * added there. Picking a result scrolls to it and outlines it briefly.
+ * added there. Each result is a link to that section's page (or the card on
+ * it); Enter follows the highlighted one.
  */
 
 type Entry = {
-  anchor: string;
+  href: string;
   index: string;
   path: string; // "Mission & Vision" or "Mission & Vision / Values"
   title: string;
@@ -22,9 +23,9 @@ type Entry = {
 
 function buildIndex(sections: Section[]): Entry[] {
   return sections.flatMap((s) => [
-    { anchor: anchorFor(s), index: s.index, path: s.title, title: s.title, label: s.label, body: s.body },
+    { href: hrefFor(s), index: s.index, path: s.title, title: s.title, label: s.label, body: s.body },
     ...(s.items ?? []).map((item) => ({
-      anchor: anchorFor(s, item),
+      href: hrefFor(s, item),
       index: s.index,
       path: `${s.title} / ${item.title}`,
       title: item.title,
@@ -52,6 +53,9 @@ function score(entry: Entry, words: string[]): number {
   }
   return total;
 }
+
+/** An id-safe version of a link, for aria-activedescendant. */
+const i2id = (href: string) => href.replace(/[^a-z0-9-]/gi, "-");
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -98,11 +102,8 @@ export function Search({ sections }: { sections: Section[] }) {
 
   const close = useCallback(() => setOpen(false), []);
 
-  const choose = (entry: Entry) => {
-    setOpen(false);
-    // Wait for the page to unlock scrolling before moving it.
-    requestAnimationFrame(() => goTo(entry.anchor));
-  };
+  // Results are real links, so Enter just follows the highlighted one.
+  const follow = () => listRef.current?.querySelector<HTMLAnchorElement>('[aria-selected="true"] a')?.click();
 
   // ⌘K / Ctrl+K anywhere, or "/" when not already typing.
   useEffect(() => {
@@ -139,7 +140,7 @@ export function Search({ sections }: { sections: Section[] }) {
       setActive((a) => Math.max(0, a - 1));
     } else if (e.key === "Enter" && results[active]) {
       e.preventDefault();
-      choose(results[active]);
+      follow();
     }
   };
 
@@ -182,7 +183,7 @@ export function Search({ sections }: { sections: Section[] }) {
                 role="combobox"
                 aria-expanded="true"
                 aria-controls="search-results"
-                aria-activedescendant={results[active] ? `result-${results[active].anchor}` : undefined}
+                aria-activedescendant={results[active] ? `result-${i2id(results[active].href)}` : undefined}
                 aria-autocomplete="list"
                 autoComplete="off"
                 spellCheck={false}
@@ -209,13 +210,13 @@ export function Search({ sections }: { sections: Section[] }) {
               <ul id="search-results" role="listbox" className="search-results" ref={listRef}>
                 {results.map((r, i) => (
                   <li
-                    key={r.anchor}
-                    id={`result-${r.anchor}`}
+                    key={r.href}
+                    id={`result-${i2id(r.href)}`}
                     role="option"
                     aria-selected={i === active}
                     onMouseMove={() => setActive(i)}
-                    onClick={() => choose(r)}
                   >
+                    <a href={r.href} tabIndex={-1} onClick={close}>
                     <span className="search-index">{r.index}</span>
                     <span className="search-text">
                       <span className="search-path">
@@ -228,6 +229,7 @@ export function Search({ sections }: { sections: Section[] }) {
                     <span className="search-go" aria-hidden="true">
                       ↵
                     </span>
+                    </a>
                   </li>
                 ))}
               </ul>

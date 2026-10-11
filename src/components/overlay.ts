@@ -48,16 +48,12 @@ export function useOverlay(
   }, [open, close, trigger, panel]);
 }
 
-/** Scroll to a section or card and briefly mark it. */
-export function goTo(anchor: string) {
-  const el = document.getElementById(anchor);
+/** Briefly mark an element, such as the card a link or search result pointed to. */
+export function highlight(id: string) {
+  const el = document.getElementById(id);
   if (!el) return;
-  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  el.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
-  history.replaceState(null, "", anchor === "top" ? location.pathname : `#${anchor}`);
-  if (anchor === "top") return;
   el.classList.remove("is-target");
-  void el.offsetWidth; // restart the highlight animation
+  void el.offsetWidth; // restart the animation
   el.classList.add("is-target");
   window.setTimeout(() => el.classList.remove("is-target"), 2200);
 }
