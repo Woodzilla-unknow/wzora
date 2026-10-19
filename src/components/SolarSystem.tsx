@@ -4,9 +4,10 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import { companyHref, type Company } from "@/content/site";
 
 /*
- * The front page's solar system: WZORA's companies orbit a sun (the spinning
- * W/Z mark, drawn separately by Logo3D so it can also fly to the corner of
- * the other scenes), each joined to it by a line. Companies on orbit 1 sit
+ * WZORA's solar system, shown in the WZORA.companies scene of the front page:
+ * the companies orbit a sun (the spinning W/Z mark, drawn separately by
+ * Logo3D so it can also sit in the corner of the other scenes), each joined
+ * to it by a line. Companies on orbit 1 sit
  * closest to the sun, orbit 3 furthest out.
  *
  * The rings are dots on a tilted plane, so planets come nearer (and grow) as
@@ -22,7 +23,7 @@ const ORBITS = [
   { radius: 0.96, speed: 0.12 },
 ];
 
-const ELEVATION = 0.38; // how far above the orbital plane we look from (radians)
+const ELEVATION = 0.5; // how far above the orbital plane we look from (radians)
 const PERSPECTIVE = 5; // camera distance, in system radii
 const DOT_GAP = 9; // CSS pixels between the dots of a ring
 
@@ -97,11 +98,11 @@ export function SolarSystem({ companies, className, active = true, onSun }: Prop
 
       // Size the system to its box: room for planet labels at the sides and below.
       const narrow = wrap.clientWidth < 600;
-      const padX = (narrow ? 50 : 90) * dpr;
-      const padY = 70 * dpr;
+      const padX = (narrow ? 44 : 60) * dpr;
+      const padY = 64 * dpr;
       const sinE = Math.sin(ELEVATION);
       const cosE = Math.cos(ELEVATION);
-      const R = Math.max(40 * dpr, Math.min((W / 2 - padX) / 0.96, (H / 2 - padY) / 0.45));
+      const R = Math.max(40 * dpr, Math.min((W / 2 - padX) / 0.96, (H / 2 - padY) / (0.96 * sinE * 1.2)));
       const cx = W / 2;
       const cy = H / 2;
       if (report)

@@ -8,19 +8,24 @@ import { SolarSystem } from "@/components/SolarSystem";
 import { companies, hrefFor, site, type Item, type Section } from "@/content/site";
 
 /*
- * The front page's pinned stage. Scene 0 is the hero: WZORA's solar system,
- * with the W/Z mark spinning in 3D as its sun and the companies orbiting it,
- * above the WZORA wordmark. Each scroll step after that is one section's
- * scene ("WZORA.about", "WZORA.mission", …): the 4D shape appears in a
- * central frame and morphs into a different polytope for each section, the
- * section's text sits inside the frame, and its highlights sit in boxes
- * around it. The spinning mark is one element throughout: in the section
- * scenes it shrinks into the top-right corner, and scrolling back to the
- * start grows it back into the sun. The shapes keep turning the whole time;
+ * The front page's pinned stage. Scene 0 is the hero: the 4D shape fills the
+ * screen behind WZORA. Each scroll step after that is one section's scene
+ * ("WZORA.about", "WZORA.mission", …): the shape glides into a central frame
+ * and morphs into a different polytope, the section's text sits inside the
+ * frame, and its highlights sit in boxes around it.
+ *
+ * WZORA.companies is the exception: there the frame holds WZORA's solar
+ * system, the companies orbiting the W/Z mark. That mark spins in 3D in the
+ * top-right corner of every other scene, and on WZORA.companies it grows out
+ * of the corner into the sun. The shapes keep turning the whole time;
  * scrolling changes the scene.
  */
 
-const SCENE_SHAPES: ShapeId[] = ["24-cell", "tesseract", "16-cell", "5-cell"];
+// The hero is a tesseract, the shape the first-visit start-up builds.
+const SCENE_SHAPES: ShapeId[] = ["tesseract", "24-cell", "16-cell", "5-cell"];
+
+// The section whose scene shows the solar system.
+const SOLAR_SECTION = "companies";
 
 const EMPTY_BOXES: Item[] = [
   { title: "", body: null },
@@ -33,8 +38,8 @@ export function HeroScenes({ sections }: { sections: Section[] }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const sun = useRef({ x: 0, y: 0, w: 0 });
 
-  // The spinning mark sits on the sun; in the section scenes it moves to the
-  // top-right corner, just inside the corner bracket. Both places go into CSS
+  // The spinning mark sits in the top-right corner, just inside the corner
+  // bracket, and on the sun in the solar scene. Both places go into CSS
   // variables so the move between them is a single transform.
   const place = useCallback(() => {
     const stage = stageRef.current;
@@ -85,22 +90,28 @@ export function HeroScenes({ sections }: { sections: Section[] }) {
   }, [sections.length]);
 
   const s = scene > 0 ? sections[scene - 1] : null;
+  const solar = s?.id === SOLAR_SECTION;
   // The scene has room for four boxes around its frame.
   const boxes = s ? (s.highlights ?? s.items ?? EMPTY_BOXES).slice(0, 4) : [];
 
   return (
-    <div className="hero-stage" data-scene={scene === 0 ? "hero" : "section"} ref={stageRef}>
+    <div
+      className="hero-stage"
+      data-scene={scene === 0 ? "hero" : "section"}
+      data-solar={solar ? "" : undefined}
+      ref={stageRef}
+    >
       <span className="hero-corner tl" aria-hidden="true" />
       <span className="hero-corner tr" aria-hidden="true" />
       <span className="hero-corner bl" aria-hidden="true" />
       <span className="hero-corner br" aria-hidden="true" />
 
-      <SolarSystem className="solar" companies={companies} active={scene === 0} onSun={onSun} />
+      <SolarSystem className="solar" companies={companies} active={solar} onSun={onSun} />
       <button
         type="button"
         className="logo3d"
         aria-label="Back to the start"
-        tabIndex={scene === 0 ? -1 : 0}
+        tabIndex={scene > 0 && !solar ? 0 : -1}
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       >
         <Logo3D className="logo3d-canvas" />
@@ -109,10 +120,10 @@ export function HeroScenes({ sections }: { sections: Section[] }) {
       <Polytope4D
         className="hero-shape"
         shape={SCENE_SHAPES[scene % SCENE_SHAPES.length]}
-        fitSelector=".scene-frame"
+        fitSelector={s ? ".scene-frame" : undefined}
         revealSelector=".hero-word-solid"
         fitTop={64}
-        active={scene > 0}
+        active={!solar}
       />
       <div className="scene-frame" aria-hidden="true" />
 

@@ -1,4 +1,3 @@
-import { ReplayStartup } from "@/components/Boot";
 import { Logo } from "@/components/Logo";
 import { sections, site } from "@/content/site";
 
@@ -23,7 +22,6 @@ export function SiteFooter() {
         <p>
           © {year} {site.name}. All rights reserved.
         </p>
-        <ReplayStartup className="footer-replay" />
       </div>
     </footer>
   );

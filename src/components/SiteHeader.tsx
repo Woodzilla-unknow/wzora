@@ -1,3 +1,4 @@
+import { BrandLink } from "@/components/BrandLink";
 import { Logo } from "@/components/Logo";
 import { Search } from "@/components/Search";
 import { SiteMap } from "@/components/SiteMap";
@@ -7,9 +8,9 @@ import { sections, site } from "@/content/site";
 export function SiteHeader() {
   return (
     <header className="site-header">
-      <a href="/" className="brand" aria-label={`${site.name} home`}>
+      <BrandLink className="brand" label={`${site.name} home`}>
         <Logo className="brand-mark" />
-      </a>
+      </BrandLink>
       <div className="header-center">
         <Search sections={sections} />
         <SiteMap sections={sections} />

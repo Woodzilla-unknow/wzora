@@ -14,8 +14,9 @@ import { Logo } from "@/components/Logo";
  * and the dot builds a 4D shape one dimension at a time: the point stretches
  * into a line, the line sweeps out a square, the square a cube and the cube
  * a tesseract, each new edge drawn one after another. The tesseract turns,
- * shrinks into the sun of the front page, and the site assembles around it
- * piece by piece. It plays once per browser; the footer can replay it.
+ * then grows into the front page's own 4D shape as the site assembles
+ * around it piece by piece. It plays once per browser; three quick clicks
+ * on the header logo play it again (see BrandLink).
  *
  * While this screen is up, <html data-boot> holds the page's own entrance
  * animations (see globals.css). It is set before first paint by
@@ -27,9 +28,11 @@ import { Logo } from "@/components/Logo";
 
 const STORAGE_KEY = "wzora-started";
 const REPLAY_EVENT = "wzora:startup";
+// Set when a replay was asked for on a page that is about to be left; the next page plays it.
+const REPLAY_KEY = "wzora-replay";
 
 /** Runs before first paint and decides which screen (if any) this load shows. */
-export const bootInitScript = `(function(){var d=document.documentElement,m="load";try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",r=document.referrer,s=false;try{s=!!r&&new URL(r).origin===location.origin}catch(e){}if(t==="back_forward"||(t==="navigate"&&s))m="off";if(!localStorage.getItem("${STORAGE_KEY}")&&!matchMedia("(prefers-reduced-motion: reduce)").matches)m="startup"}catch(e){}d.setAttribute("data-boot",m);setTimeout(function(){if(!window.__wzoraBoot)d.setAttribute("data-boot","fallback")},8000)})();`;
+export const bootInitScript = `(function(){var d=document.documentElement,m="load",q=matchMedia("(prefers-reduced-motion: reduce)").matches;try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",r=document.referrer,s=false;try{s=!!r&&new URL(r).origin===location.origin}catch(e){}if(t==="back_forward"||(t==="navigate"&&s))m="off";if(!localStorage.getItem("${STORAGE_KEY}")&&!q)m="startup"}catch(e){}try{if(sessionStorage.getItem("${REPLAY_KEY}")){sessionStorage.removeItem("${REPLAY_KEY}");if(!q)m="startup"}}catch(e){}d.setAttribute("data-boot",m);setTimeout(function(){if(!window.__wzoraBoot)d.setAttribute("data-boot","fallback")},8000)})();`;
 
 const LOG = ["System start-up", "0D · Point", "1D · Line", "2D · Square", "3D · Cube", "4D · Tesseract", "WZORA online"];
 
@@ -44,6 +47,8 @@ const AXES_START = COLLAPSE + POINT;
 const HOLD_START = AXES_START + 4 * AXIS;
 const DOCK_START = HOLD_START + HOLD;
 
+const HEADER = 64; // the fixed header's height, kept clear by the front page's shape
+
 const MIN_LOAD = 0.7; // the loading bar never fills faster than this
 const MAX_LOAD = 6; // or slower: past this, the page is shown regardless
 
@@ -55,13 +60,16 @@ function readColor(): [number, number, number] {
   return fg === "#000000" || fg === "#000" ? [0, 0, 0] : [255, 255, 255];
 }
 
-/** Lets the footer play the start-up again. */
-export function ReplayStartup({ className }: { className?: string }) {
-  return (
-    <button type="button" className={className} onClick={() => window.dispatchEvent(new Event(REPLAY_EVENT))}>
-      Replay start-up
-    </button>
-  );
+/** Plays the start-up again, here and now. */
+export function replayStartup() {
+  window.dispatchEvent(new Event(REPLAY_EVENT));
+}
+
+/** Plays the start-up again on the page being loaded next. */
+export function replayStartupOnNextPage() {
+  try {
+    sessionStorage.setItem(REPLAY_KEY, "1");
+  } catch {}
 }
 
 export function BootScreen() {
@@ -149,7 +157,7 @@ export function BootScreen() {
     let barFrom = { x: vw / 2, y: vh / 2, half: 80 };
     let shownStep = 0;
     let built = false;
-    // Where the tesseract finishes: the sun, if the front page is showing it.
+    // Where the tesseract finishes: the front page's 4D shape, if it is showing.
     let dockTo = { x: vw / 2, y: vh / 2, size: 0 };
 
     // A tesseract's 16 corners are the binary numbers 0000–1111: bit k says
@@ -273,10 +281,15 @@ export function BootScreen() {
       }
       if (!built && s >= DOCK_START) {
         built = true;
-        const sun = document.querySelector<HTMLElement>('[data-scene="hero"] > .logo3d');
-        const box = sun?.getBoundingClientRect();
-        if (box && box.width > 0 && box.bottom > 0 && box.top < vh)
-          dockTo = { x: box.left + box.width / 2, y: box.top + box.height / 2, size: box.width };
+        // The shape fills the screen below the header, less a margin.
+        const shape = document.querySelector<HTMLElement>('[data-scene="hero"] > .hero-shape');
+        const box = shape?.getBoundingClientRect();
+        if (box && box.height > HEADER && box.bottom > 0 && box.top < vh)
+          dockTo = {
+            x: box.left + box.width / 2,
+            y: box.top + HEADER + (box.height - HEADER) / 2,
+            size: Math.min(box.width, box.height - HEADER) - 60,
+          };
         html.dataset.boot = "built";
         setDocking(true);
       }
