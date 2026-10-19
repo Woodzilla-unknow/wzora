@@ -22,6 +22,17 @@ const W = "255,738 337,738 498,1081 659,738 720,738 898,1120 861,1220 689,849 52
 const Z =
   "983,738 1645,738 1645,813 1128,1119 1645,1119 1645,1193 983,1193 983,1117 1497,813 983,813";
 
+/** The mark's geometry, shared with the 3D sun of the front page's solar system. */
+export const LOGO_SHAPES = {
+  W,
+  Z,
+  slashOuter: SLASH_OUTER,
+  slashInner: SLASH_INNER,
+  slashGap: SLASH_GAP,
+  /** The drawing's box: x, y, width, height. */
+  box: [230, 590, 1440, 750] as const,
+};
+
 export function Logo({ className, title = "WZORA" }: LogoProps) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const wMask = `w-mask-${uid}`;

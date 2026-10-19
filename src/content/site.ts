@@ -52,8 +52,13 @@ export type Company = {
   name: string;
   /** The company's website, without https:// (e.g. "kairowz.com"). */
   website: string;
-  /** How much of the company WZORA owns, in percent. */
+  /**
+   * How much of the company WZORA owns, in percent. On the front page's solar
+   * system, the more WZORA owns, the closer the company orbits.
+   */
   ownership: number;
+  /** Logo image in /public (e.g. "/logos/kairowz.svg"). Without one, its first letter is shown. */
+  logo?: string;
   body: string[] | null;
 };
 

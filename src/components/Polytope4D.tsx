@@ -193,15 +193,19 @@ type Props = {
   revealSelector?: string;
   /** CSS pixels at the top covered by something else (a fixed header), kept out of the fit. */
   fitTop?: number;
+  /** While false (hidden behind another scene), the shape pauses. */
+  active?: boolean;
 };
 
-export function Polytope4D({ className, shape, fitSelector, revealSelector, fitTop = 0 }: Props) {
+export function Polytope4D({ className, shape, fitSelector, revealSelector, fitTop = 0, active = true }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const readoutRef = useRef<HTMLSpanElement>(null);
   const [name, setName] = useState("");
   // Props read every frame without restarting the animation.
   const shapeRef = useRef(shape);
   const fitRef = useRef(fitSelector);
+  const activeRef = useRef(active);
+  activeRef.current = active;
   const controls = useRef<{ setShape: (id: ShapeId) => void } | null>(null);
   shapeRef.current = shape;
   fitRef.current = fitSelector;
@@ -529,9 +533,11 @@ export function Polytope4D({ className, shape, fitSelector, revealSelector, fitT
     };
 
     const loop = (now: number) => {
-      step(Math.min(now - last, 50) / 1000);
+      if (activeRef.current) {
+        step(Math.min(now - last, 50) / 1000);
+        draw();
+      }
       last = now;
-      draw();
       frame = requestAnimationFrame(loop);
     };
 

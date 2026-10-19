@@ -3,15 +3,18 @@
 import { useEffect, useState } from "react";
 import { Body } from "@/components/Placeholder";
 import { Polytope4D, type ShapeId } from "@/components/Polytope4D";
-import { hrefFor, site, type Item, type Section } from "@/content/site";
+import { SolarSystem } from "@/components/SolarSystem";
+import { companies, hrefFor, site, type Item, type Section } from "@/content/site";
 
 /*
- * The front page's pinned stage. Scene 0 is the hero: the 4D shape fills the
- * screen behind WZORA. Each scroll step after that is one section's scene
- * ("WZORA.about", "WZORA.mission", …): the shape glides into a central frame
- * and morphs into a different polytope, the section's text sits inside the
- * frame, and its highlights sit in boxes around it. The shape keeps turning
- * the whole time; scrolling changes the scene.
+ * The front page's pinned stage. Scene 0 is the hero: WZORA's solar system,
+ * with the W/Z mark spinning in 3D at its centre and the companies orbiting
+ * it (the more WZORA owns, the closer), above the WZORA wordmark. Each scroll
+ * step after that is one section's scene ("WZORA.about", "WZORA.mission", …):
+ * the 4D shape appears in a central frame and morphs into a different
+ * polytope for each section, the section's text sits inside the frame, and
+ * its highlights sit in boxes around it. The shape keeps turning the whole
+ * time; scrolling changes the scene.
  */
 
 const SCENE_SHAPES: ShapeId[] = ["24-cell", "tesseract", "16-cell", "5-cell"];
@@ -53,29 +56,37 @@ export function HeroScenes({ sections }: { sections: Section[] }) {
       <span className="hero-corner bl" aria-hidden="true" />
       <span className="hero-corner br" aria-hidden="true" />
 
+      <SolarSystem className="solar" companies={companies} active={scene === 0} />
+      <p className="solar-legend" aria-hidden="true">
+        Closer orbit = more owned by {site.name}
+      </p>
+
       <Polytope4D
         className="hero-shape"
         shape={SCENE_SHAPES[scene % SCENE_SHAPES.length]}
-        fitSelector={s ? ".scene-frame" : undefined}
+        fitSelector=".scene-frame"
         revealSelector=".hero-word-solid"
         fitTop={64}
+        active={scene > 0}
       />
       <div className="scene-frame" aria-hidden="true" />
 
-      <h1 className="hero-word" aria-label={site.name}>
-        {/* Two identical layers: wire outlines, and a solid copy on top that
-            the 4D shape reveals wherever a white region passes behind it. */}
-        {(["outline", "solid"] as const).map((layer) => (
-          <span key={layer} className={`hero-word-layer hero-word-${layer}`} aria-hidden="true">
-            {site.name.split("").map((ch, i) => (
-              <span key={i} style={{ animationDelay: `${0.5 + i * 0.08}s` }}>
-                {ch}
-              </span>
-            ))}
-          </span>
-        ))}
-      </h1>
-      <p className="hero-tagline">{site.tagline}</p>
+      <div className="hero-center">
+        <h1 className="hero-word" aria-label={site.name}>
+          {/* Two identical layers: wire outlines, and a solid copy on top that
+              the 4D shape reveals wherever a white region passes behind it. */}
+          {(["outline", "solid"] as const).map((layer) => (
+            <span key={layer} className={`hero-word-layer hero-word-${layer}`} aria-hidden="true">
+              {site.name.split("").map((ch, i) => (
+                <span key={i} style={{ animationDelay: `${0.5 + i * 0.08}s` }}>
+                  {ch}
+                </span>
+              ))}
+            </span>
+          ))}
+        </h1>
+        <p className="hero-tagline">{site.tagline}</p>
+      </div>
 
       <p className="scroll-cue" aria-hidden="true">
         <span>Scroll</span>

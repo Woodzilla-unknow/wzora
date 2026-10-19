@@ -782,7 +782,17 @@ html:has([data-scroll-track]) {
   z-index: 0;
   margin: 0;
   pointer-events: none;
-  animation: fade 2s ease 0.1s both;
+  animation: intro 2s ease 0.1s both;
+  transition: opacity 0.6s ease;
+}
+
+/* The first screen shows the solar system; the 4D shape waits in the frame. */
+[data-scene="hero"] .hero-shape {
+  opacity: 0;
+}
+
+[data-scene="hero"] .hero-word-solid {
+  visibility: hidden;
 }
 
 .polytope-canvas {
@@ -840,15 +850,165 @@ html:has([data-scroll-track]) {
 .hero-stage > .scroll-cue,
 .hero-stage > .scene-frame,
 .hero-stage > .scene-title,
-.hero-stage > .scene {
+.hero-stage > .scene,
+.hero-stage > .solar,
+.hero-stage > .solar-legend {
   position: absolute;
 }
 
-/* ───────────────────────── Section scenes ───────────────────────── */
+/* ───────────────────────── Solar system (first screen) ───────────────────────── */
 
-.hero-word {
+.hero-stage {
+  /* Where the system sits: below the header, above the wordmark. */
+  --solar-t: 64px;
+  --solar-b: 36svh;
+}
+
+.solar {
+  left: 0;
+  right: 0;
+  top: var(--solar-t);
+  bottom: var(--solar-b);
+  transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.1, 1);
+  animation: intro 1.4s ease both;
+}
+
+[data-scene="section"] .solar {
+  opacity: 0;
+  transform: scale(0.9);
+  pointer-events: none;
+}
+
+.solar-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.solar-planets {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+/* A planet: a link moved into place every frame (left/top stay 0). */
+.planet {
+  --disc: 64px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform-origin: 0 0;
+  pointer-events: auto;
+}
+
+.planet-disc {
+  display: grid;
+  place-items: center;
+  width: var(--disc);
+  height: var(--disc);
+  overflow: hidden;
+  border: 1px solid var(--fg);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--fg);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.planet-disc img {
+  width: 68%;
+  height: 68%;
+  object-fit: contain;
+  filter: grayscale(1);
+}
+
+.planet-mono {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.planet:hover .planet-disc,
+.planet:focus-visible .planet-disc {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.planet:focus-visible {
+  outline: none;
+}
+
+.planet-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+.planet-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.planet-meta {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.solar-legend {
+  left: calc(var(--gutter) + 32px);
+  bottom: 36px;
+  margin: 0;
+  padding: 4px 8px;
+  background: var(--bg);
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: opacity 0.3s ease;
+}
+
+[data-scene="section"] .solar-legend {
+  opacity: 0;
+}
+
+/* WZORA and the tagline: below the system on the first screen, inside the frame in a scene. */
+.hero-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.1, 1);
 }
+
+[data-scene="hero"] .hero-center {
+  transform: translateY(calc(50svh - var(--solar-b) / 2 - 48px)) scale(0.62);
+}
+
+@media (max-width: 560px) {
+  .planet {
+    --disc: 52px;
+  }
+  .planet-mono {
+    font-size: 21px;
+  }
+  .solar-legend {
+    display: none;
+  }
+}
+
+/* ───────────────────────── Section scenes ───────────────────────── */
 
 .polytope-name {
   transition: opacity 0.3s ease;
@@ -872,7 +1032,7 @@ html:has([data-scroll-track]) {
 }
 
 /* WZORA moves to the middle of the frame and shrinks a little. */
-[data-scene="section"] .hero-word {
+[data-scene="section"] .hero-center {
   transform: translateY(calc((var(--frame-t) - var(--frame-b)) / 2 + 12px)) scale(0.78);
 }
 
