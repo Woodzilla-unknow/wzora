@@ -852,8 +852,18 @@ html:has([data-scroll-track]) {
 .hero-stage > .scene-title,
 .hero-stage > .scene,
 .hero-stage > .solar,
-.hero-stage > .solar-legend {
+.hero-stage > .logo3d {
   position: absolute;
+}
+
+/* The solar system makes no stacking layer of its own, so the spinning mark
+   can sit between its back canvas (behind the sun) and its front canvas. */
+.hero-stage > .solar {
+  z-index: auto;
+}
+
+.hero-stage > .logo3d {
+  z-index: 2;
 }
 
 /* ───────────────────────── Solar system (first screen) ───────────────────────── */
@@ -882,6 +892,62 @@ html:has([data-scroll-track]) {
 .solar-canvas {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.solar-canvas.is-back {
+  z-index: 1;
+}
+
+.solar-canvas.is-front {
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* The spinning W/Z mark: the sun on the first screen, a small mark in the
+   top-right corner of every section scene. One transform moves it between
+   the two, so it shrinks into the corner and grows back into the sun. */
+.hero-stage {
+  --sun-x: 50%;
+  --sun-y: 38svh;
+  --sun-w: 260px;
+  --corner-dx: 0px;
+  --corner-dy: 0px;
+  --corner-scale: 1;
+}
+
+.logo3d {
+  left: var(--sun-x);
+  top: var(--sun-y);
+  width: var(--sun-w);
+  aspect-ratio: 4 / 3;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  transform: translate(-50%, -50%);
+  transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.1, 1);
+  pointer-events: none;
+  animation: intro 1.4s ease both;
+}
+
+[data-scene="section"] .logo3d,
+.hero-stage[data-scene="section"] > .logo3d {
+  z-index: 4;
+  transform: translate(-50%, -50%) translate(var(--corner-dx), var(--corner-dy)) scale(var(--corner-scale));
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.logo3d:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 4px;
+}
+
+.logo3d-canvas {
+  display: block;
   width: 100%;
   height: 100%;
 }
@@ -960,30 +1026,6 @@ html:has([data-scroll-track]) {
   font-weight: 600;
 }
 
-.planet-meta {
-  font: 500 10px/1 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.solar-legend {
-  left: calc(var(--gutter) + 32px);
-  bottom: 36px;
-  margin: 0;
-  padding: 4px 8px;
-  background: var(--bg);
-  font: 500 10px/1 var(--font-mono);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--muted);
-  transition: opacity 0.3s ease;
-}
-
-[data-scene="section"] .solar-legend {
-  opacity: 0;
-}
-
 /* WZORA and the tagline: below the system on the first screen, inside the frame in a scene. */
 .hero-center {
   display: flex;
@@ -1002,9 +1044,6 @@ html:has([data-scroll-track]) {
   }
   .planet-mono {
     font-size: 21px;
-  }
-  .solar-legend {
-    display: none;
   }
 }
 
@@ -1167,7 +1206,7 @@ html:has([data-scroll-track]) {
 
 .scene-box.at-1 {
   right: calc(var(--gutter) + 16px);
-  top: calc(var(--frame-t) + 4svh);
+  top: calc(var(--frame-t) + 4svh + 40px);
   width: calc(var(--frame-r) - var(--gutter) - 48px);
 }
 

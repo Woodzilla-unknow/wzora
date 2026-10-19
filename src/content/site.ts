@@ -53,10 +53,10 @@ export type Company = {
   /** The company's website, without https:// (e.g. "kairowz.com"). */
   website: string;
   /**
-   * How much of the company WZORA owns, in percent. On the front page's solar
-   * system, the more WZORA owns, the closer the company orbits.
+   * Which ring of the front page's solar system the company orbits on:
+   * 1 is closest to WZORA, 3 is furthest out. Never shown as text.
    */
-  ownership: number;
+  orbit: 1 | 2 | 3;
   /** Logo image in /public (e.g. "/logos/kairowz.svg"). Without one, its first letter is shown. */
   logo?: string;
   body: string[] | null;
@@ -68,7 +68,7 @@ export const companies: Company[] = [
     id: "kairowz",
     name: "Kairowz",
     website: "kairowz.com",
-    ownership: 100,
+    orbit: 1,
     body: null,
   },
 ];

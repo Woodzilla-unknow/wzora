@@ -1,8 +1,8 @@
 import { Body } from "@/components/Placeholder";
 import { Reveal } from "@/components/Reveal";
-import { companyHref, site, type Company, type Section } from "@/content/site";
+import { companyHref, type Company, type Section } from "@/content/site";
 
-/** A company WZORA owns: its ownership, its website, and its information. */
+/** A WZORA company: its website and its information. */
 export function CompanyView({
   company: c,
   section,
@@ -36,12 +36,6 @@ export function CompanyView({
           </h1>
 
           <dl className="company-facts reveal">
-            <div>
-              <dt>Ownership</dt>
-              <dd>
-                {c.ownership}% owned by {site.name}
-              </dd>
-            </div>
             <div>
               <dt>Website</dt>
               <dd>
