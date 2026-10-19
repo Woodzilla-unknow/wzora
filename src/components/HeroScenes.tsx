@@ -43,7 +43,8 @@ export function HeroScenes({ sections }: { sections: Section[] }) {
   }, [sections.length]);
 
   const s = scene > 0 ? sections[scene - 1] : null;
-  const boxes = s ? (s.highlights ?? s.items ?? EMPTY_BOXES) : [];
+  // The scene has room for four boxes around its frame.
+  const boxes = s ? (s.highlights ?? s.items ?? EMPTY_BOXES).slice(0, 4) : [];
 
   return (
     <div className="hero-stage" data-scene={scene === 0 ? "hero" : "section"}>
@@ -106,8 +107,9 @@ export function HeroScenes({ sections }: { sections: Section[] }) {
                 <span className="scene-box-index">
                   {s.index}.{i + 1}
                 </span>
-                {box.title}
+                {box.href ? <a href={box.href}>{box.title} →</a> : box.title}
               </h3>
+              {box.meta && <p className="card-meta">{box.meta}</p>}
               <Body body={box.body} />
             </article>
           ))}

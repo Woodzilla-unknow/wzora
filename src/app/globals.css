@@ -896,7 +896,8 @@ html:has([data-scroll-track]) {
   align-items: flex-start;
   gap: 8px;
   margin: 0;
-  font-size: clamp(1.5rem, 2.6vw, 2.6rem);
+  /* Sized so even the longest name ("WZORA.leadership") fits beside the frame. */
+  font-size: clamp(1.25rem, 2vw, 2.2rem);
   font-weight: 500;
   letter-spacing: -0.02em;
   line-height: 1;
@@ -1045,7 +1046,7 @@ html:has([data-scroll-track]) {
     flex-direction: row;
     align-items: baseline;
     gap: 12px;
-    font-size: 1.5rem;
+    font-size: clamp(1.15rem, 6vw, 1.5rem);
   }
 
   .scene {
@@ -1341,6 +1342,69 @@ html:has([data-scroll-track]) {
 
 .card .placeholder-dot {
   margin-top: 0.6em;
+}
+
+/* A short line under a card's title, such as a company's website. */
+.card-meta {
+  margin: -8px 0 16px;
+  font: 500 12px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.scene-box .card-meta {
+  margin: -6px 0 0;
+}
+
+.card h2 a:hover,
+.scene-box h3 a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* A company page: where it sits, and its key facts. */
+.crumbs {
+  margin: 0 0 16px;
+  font: 500 12px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.crumbs a:hover {
+  color: var(--fg);
+}
+
+.company-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  max-width: 640px;
+  margin: 0 0 32px;
+  border-top: 1px solid var(--line);
+}
+
+.company-facts > div {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.company-facts dt {
+  margin-bottom: 6px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.company-facts dd {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.company-facts a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 .card h2,

@@ -25,7 +25,8 @@ export function SectionView({ section: s, prev, next }: { section: Section; prev
             <div className="cards">
               {s.items.map((item) => (
                 <article key={item.title} id={anchorFor(s, item)} className="card reveal">
-                  <h2>{item.title}</h2>
+                  <h2>{item.href ? <a href={item.href}>{item.title} →</a> : item.title}</h2>
+                  {item.meta && <p className="card-meta">{item.meta}</p>}
                   <Body body={item.body} />
                 </article>
               ))}

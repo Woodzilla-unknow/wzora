@@ -6,6 +6,9 @@
  * paragraphs. Any section (or item) whose body is `null` shows the
  * "Information is not complete yet." notice instead. Search and the site map
  * read from this file, so new content shows up there automatically.
+ *
+ * Companies WZORA owns are listed in `companies`; each one gets its own page
+ * at /companies/<id> and appears under Our Companies.
  */
 
 export const PLACEHOLDER = "Information is not complete yet.";
@@ -13,6 +16,10 @@ export const PLACEHOLDER = "Information is not complete yet.";
 export type Item = {
   title: string;
   body: string[] | null;
+  /** Where the item links to, when it has its own page (e.g. a company). */
+  href?: string;
+  /** A short line shown under the title, such as a website. */
+  meta?: string;
 };
 
 export type Section = {
@@ -34,10 +41,34 @@ export function anchorFor(section: Section, item: Item): string {
   return `${section.id}-${item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
 }
 
-/** Link to a section's own page, or to one of its cards on that page. */
+/** Link to a section's own page, or to one of its items (its own page, or its card). */
 export function hrefFor(section: Section, item?: Item): string {
-  return item ? `/${section.id}#${anchorFor(section, item)}` : `/${section.id}`;
+  if (!item) return `/${section.id}`;
+  return item.href ?? `/${section.id}#${anchorFor(section, item)}`;
 }
+
+export type Company = {
+  id: string;
+  name: string;
+  /** The company's website, without https:// (e.g. "kairowz.com"). */
+  website: string;
+  /** How much of the company WZORA owns, in percent. */
+  ownership: number;
+  body: string[] | null;
+};
+
+/** Companies WZORA owns. */
+export const companies: Company[] = [
+  {
+    id: "kairowz",
+    name: "Kairowz",
+    website: "kairowz.com",
+    ownership: 100,
+    body: null,
+  },
+];
+
+export const companyHref = (c: Company) => `/companies/${c.id}`;
 
 export const site = {
   name: "WZORA",
@@ -71,6 +102,7 @@ export const sections: Section[] = [
     label: "Companies",
     title: "Our Companies",
     body: null,
+    items: companies.map((c) => ({ title: c.name, body: c.body, href: companyHref(c), meta: c.website })),
   },
   {
     id: "leadership",
