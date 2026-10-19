@@ -124,6 +124,7 @@ export function HeroScenes({ sections }: { sections: Section[] }) {
         revealSelector=".hero-word-solid"
         fitTop={64}
         active={!solar}
+        build
       />
       <div className="scene-frame" aria-hidden="true" />
 

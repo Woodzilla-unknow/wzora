@@ -1742,11 +1742,39 @@ html[data-boot] .boot * {
   pointer-events: none;
 }
 
-/* As the tesseract settles, the screen clears and the page builds itself. */
-.boot.is-docking {
+/* The start-up draws on the page itself: the screen turns clear, and only the
+   4D shape shows while it builds. */
+.boot[data-stage="startup"] {
   background-color: transparent;
+}
+
+/* While the page is created, it can already be used. */
+.boot.is-creating {
   pointer-events: none;
 }
+
+html[data-boot="startup"] :is(.site-header, main, .site-footer) {
+  visibility: hidden;
+}
+
+html[data-boot="startup"] .hero-shape {
+  visibility: visible;
+}
+
+html[data-boot="startup"] .hero-shape .polytope-name {
+  visibility: hidden;
+}
+
+/* The start-up creates these pieces itself, so their own entrance animations stand down. */
+html:is([data-boot="startup"], [data-boot="built"])
+  :is(.hero-shape, .logo3d, .hero-word-layer span, .hero-tagline, .scroll-cue > span) {
+  animation: none;
+}
+
+.hero-corner.tl { transform-origin: top left; }
+.hero-corner.tr { transform-origin: top right; }
+.hero-corner.bl { transform-origin: bottom left; }
+.hero-corner.br { transform-origin: bottom right; }
 
 .boot-center {
   position: absolute;
@@ -1795,7 +1823,7 @@ html[data-boot] .boot * {
   to { transform: scaleX(0.3); }
 }
 
-/* The start-up draws on the canvas: the bar hands over to it at once. */
+/* The start-up draws the bar on the canvas instead, collapsing into a dot. */
 .boot[data-stage="startup"] .boot-center {
   opacity: 0;
 }
@@ -1812,14 +1840,34 @@ html[data-boot] .boot * {
   pointer-events: none;
 }
 
+/* Off the front page, the start-up builds a shape of its own, let go once the page is made. */
+.boot-shape {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+.boot-shape .polytope-name {
+  display: none;
+}
+
+.boot.is-creating .boot-shape {
+  opacity: 0;
+}
+
+/* The start-up log, like a console in the bottom-right corner. */
 .boot-log {
   position: absolute;
-  left: var(--gutter);
-  bottom: 32px;
+  right: calc(var(--gutter) + 32px);
+  bottom: 40px;
   width: min(300px, calc(100% - 2 * var(--gutter)));
   margin: 0;
-  padding: 0;
+  padding: 10px 16px;
   list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--line);
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 2;
@@ -1827,6 +1875,21 @@ html[data-boot] .boot * {
   text-transform: uppercase;
   color: var(--muted);
   transition: opacity 0.4s ease;
+}
+
+.boot-log:empty {
+  display: none;
+}
+
+.boot.is-settled .boot-log {
+  opacity: 0;
+}
+
+@media (max-width: 560px) {
+  .boot-log {
+    right: var(--gutter);
+    bottom: 24px;
+  }
 }
 
 .boot-log li {
@@ -1857,95 +1920,6 @@ html[data-boot] .boot * {
 
 .boot-log-status {
   color: var(--fg);
-}
-
-.boot.is-docking .boot-log {
-  opacity: 0;
-}
-
-/* After the start-up the page assembles piece by piece: the header, the 4D
-   shape, the corners, the spinning mark, the letters of WZORA, then the rest.
-   Every piece has its own animation name here, so a replay plays them again. */
-html[data-boot="built"] .site-header {
-  animation: build-header 0.8s ease 0.1s both;
-}
-
-html[data-boot="built"] :is(.brand, .header-center > *, .theme-toggle) {
-  animation: build-down 0.7s cubic-bezier(0.2, 0.7, 0.1, 1) both;
-}
-
-html[data-boot="built"] .brand { animation-delay: 0.15s; }
-html[data-boot="built"] .header-center > :nth-child(1) { animation-delay: 0.25s; }
-html[data-boot="built"] .header-center > :nth-child(2) { animation-delay: 0.35s; }
-html[data-boot="built"] .theme-toggle { animation-delay: 0.45s; }
-
-html[data-boot="built"] .hero-shape {
-  animation: build-fade 1.4s ease 0.1s both;
-}
-
-html[data-boot="built"] .logo3d {
-  animation: build-pop 1s cubic-bezier(0.2, 0.7, 0.1, 1) 0.8s both;
-}
-
-html[data-boot="built"] .hero-corner {
-  animation: build-corner 0.6s cubic-bezier(0.2, 0.7, 0.1, 1) 0.6s both;
-}
-
-.hero-corner.tl { transform-origin: top left; }
-.hero-corner.tr { transform-origin: top right; }
-.hero-corner.bl { transform-origin: bottom left; }
-.hero-corner.br { transform-origin: bottom right; }
-
-html[data-boot="built"] .hero-word-layer span {
-  animation-name: build-rise;
-  animation-delay: calc(0.9s + var(--i, 0) * 0.08s);
-}
-
-html[data-boot="built"] .hero-tagline {
-  animation: build-fade 0.9s ease 1.5s both;
-}
-
-html[data-boot="built"] .scroll-cue > span {
-  animation: build-fade 0.8s ease 1.8s both;
-}
-
-html[data-boot="built"] .page > * {
-  animation: build-up 0.8s cubic-bezier(0.2, 0.7, 0.1, 1) both;
-  animation-delay: 0.9s;
-}
-
-html[data-boot="built"] .page > :nth-child(1) { animation-delay: 0.5s; }
-html[data-boot="built"] .page > :nth-child(2) { animation-delay: 0.6s; }
-html[data-boot="built"] .page > :nth-child(3) { animation-delay: 0.7s; }
-html[data-boot="built"] .page > :nth-child(4) { animation-delay: 0.8s; }
-
-@keyframes build-header {
-  from { background-color: transparent; border-bottom-color: transparent; }
-}
-
-@keyframes build-down {
-  from { filter: opacity(0); translate: 0 -10px; }
-}
-
-@keyframes build-up {
-  from { filter: opacity(0); translate: 0 14px; }
-}
-
-@keyframes build-pop {
-  from { filter: opacity(0); scale: 0.25; }
-}
-
-@keyframes build-corner {
-  from { filter: opacity(0); scale: 0; }
-}
-
-@keyframes build-fade {
-  from { filter: opacity(0); }
-}
-
-@keyframes build-rise {
-  from { transform: translateY(105%); }
-  to { transform: none; }
 }
 
 /* ───────────────────────── Motion preferences ───────────────────────── */

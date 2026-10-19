@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
+import { Polytope4D } from "@/components/Polytope4D";
+import { AXIS, POINT, SHAPE_BUILT, endShapeBuild, startShapeBuild } from "@/components/startup";
 
 /*
  * The loading screen, and the start-up a first-time visitor sees.
@@ -11,19 +13,24 @@ import { Logo } from "@/components/Logo";
  * Moving between pages of the site skips it, so browsing stays quick.
  *
  * On someone's first visit the loading bar then collapses into a single dot,
- * and the dot builds a 4D shape one dimension at a time: the point stretches
- * into a line, the line sweeps out a square, the square a cube and the cube
- * a tesseract, each new edge drawn one after another. The tesseract turns,
- * then grows into the front page's own 4D shape as the site assembles
- * around it piece by piece. It plays once per browser; three quick clicks
- * on the header logo play it again (see BrandLink).
+ * and the 4D shape grows out of that dot one dimension at a time: point,
+ * line, square, cube, tesseract (see startup.ts), its faces filling with dots
+ * as on the finished shape. On the front page this is the page's own
+ * background shape, so the start-up ends in it and it simply carries on;
+ * elsewhere the start-up screen builds a shape of its own and lets it go.
+ * Then the system creates the page around the shape one piece at a time:
+ * the header bar, the logo, search, the site map, the theme switch, the
+ * frame, the 3D mark, WZORA, each logged as it comes online.
  *
- * While this screen is up, <html data-boot> holds the page's own entrance
- * animations (see globals.css). It is set before first paint by
- * bootInitScript: "load", "startup", or "off" for page-to-page navigation.
- * Afterwards it reads "done", or "built" once the start-up has assembled
- * the page. If the site's scripts never arrive, the init script gives up
- * after a few seconds ("fallback") and the page shows as it is.
+ * It plays once per browser; three quick clicks on the header logo play it
+ * again (see BrandLink).
+ *
+ * While this screen is up, <html data-boot> holds the page back (see
+ * globals.css). It is set before first paint by bootInitScript: "load",
+ * "startup", or "off" for page-to-page navigation. Afterwards it reads
+ * "done", or "built" once the start-up has created the page. If the site's
+ * scripts never arrive, the init script gives up after a few seconds
+ * ("fallback") and the page shows as it is.
  */
 
 const STORAGE_KEY = "wzora-started";
@@ -34,31 +41,81 @@ const REPLAY_KEY = "wzora-replay";
 /** Runs before first paint and decides which screen (if any) this load shows. */
 export const bootInitScript = `(function(){var d=document.documentElement,m="load",q=matchMedia("(prefers-reduced-motion: reduce)").matches;try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",r=document.referrer,s=false;try{s=!!r&&new URL(r).origin===location.origin}catch(e){}if(t==="back_forward"||(t==="navigate"&&s))m="off";if(!localStorage.getItem("${STORAGE_KEY}")&&!q)m="startup"}catch(e){}try{if(sessionStorage.getItem("${REPLAY_KEY}")){sessionStorage.removeItem("${REPLAY_KEY}");if(!q)m="startup"}}catch(e){}d.setAttribute("data-boot",m);setTimeout(function(){if(!window.__wzoraBoot)d.setAttribute("data-boot","fallback")},8000)})();`;
 
-const LOG = ["System start-up", "0D · Point", "1D · Line", "2D · Square", "3D · Cube", "4D · Tesseract", "WZORA online"];
-
-// The start-up's timeline, in seconds.
-const COLLAPSE = 0.55; // the loading bar shrinks into a dot
-const POINT = 0.5; // the dot on its own
-const AXIS = 1; // each new dimension
-const GROW = 0.55; // one new edge drawing itself, within a dimension
-const HOLD = 1.1; // the finished tesseract turning
-const DOCK = 0.9; // shrinking into place as the page appears
-const AXES_START = COLLAPSE + POINT;
-const HOLD_START = AXES_START + 4 * AXIS;
-const DOCK_START = HOLD_START + HOLD;
+// The start-up's timeline, in seconds from the moment the loading bar is full.
+const COLLAPSE = 0.55; // the bar shrinks into the dot the shape grows from
+const HOLD = 0.6; // the finished tesseract turning on its own
+const CREATE = COLLAPSE + SHAPE_BUILT + HOLD; // the page starts being created
+const STEP = 0.32; // between one piece of the page and the next
+const SETTLE = 0.9; // after "online", the log clears and the last details appear
+const OUTRO = 0.6; // then the start-up screen goes
 
 const HEADER = 64; // the fixed header's height, kept clear by the front page's shape
+const LOG_LINES = 7; // log lines shown at once; older ones scroll away
 
 const MIN_LOAD = 0.7; // the loading bar never fills faster than this
 const MAX_LOAD = 6; // or slower: past this, the page is shown regardless
 
 const ease = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
-const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
 function readColor(): [number, number, number] {
   const fg = getComputedStyle(document.documentElement).getPropertyValue("--fg").trim();
   return fg === "#000000" || fg === "#000" ? [0, 0, 0] : [255, 255, 255];
 }
+
+/** One piece of the page the start-up creates, with its line in the log. */
+type Piece = {
+  label: string;
+  targets: string;
+  frames: Keyframe[];
+  duration?: number;
+  /** Milliseconds between the elements `targets` matches (in their --i order, if they have one). */
+  stagger?: number;
+};
+
+// How pieces come into being: drawn across, popped up, grown from a corner…
+const DRAW: Keyframe[] = [{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)" }];
+const WIPE: Keyframe[] = [
+  { clipPath: "inset(0 100% 0 0)", filter: "opacity(0)" },
+  { clipPath: "inset(0 0% 0 0)", filter: "opacity(1)" },
+];
+const POP: Keyframe[] = [
+  { scale: "0.3", filter: "opacity(0)" },
+  { scale: "1", filter: "opacity(1)" },
+];
+const GROW_IN: Keyframe[] = [
+  { scale: "0", filter: "opacity(0)" },
+  { scale: "1", filter: "opacity(1)" },
+];
+const RISE: Keyframe[] = [{ transform: "translateY(105%)" }, { transform: "translateY(0)" }];
+const UP: Keyframe[] = [
+  { translate: "0 14px", filter: "opacity(0)" },
+  { translate: "0 0", filter: "opacity(1)" },
+];
+const FADE: Keyframe[] = [{ filter: "opacity(0)" }, { filter: "opacity(1)" }];
+
+const HEADER_PIECES: Piece[] = [
+  { label: "Header", targets: ".site-header", frames: DRAW, duration: 700 },
+  { label: "Logo", targets: ".brand", frames: POP },
+  { label: "Search", targets: ".header-center > :nth-child(1)", frames: WIPE },
+  { label: "Site map", targets: ".header-center > :nth-child(2)", frames: WIPE },
+  { label: "Theme switch", targets: ".theme-toggle", frames: WIPE },
+];
+
+const FRONT_PAGE_PIECES: Piece[] = [
+  ...HEADER_PIECES,
+  { label: "Frame", targets: ".hero-corner", frames: GROW_IN, stagger: 80 },
+  { label: "3D mark", targets: ".logo3d", frames: POP, duration: 900 },
+  { label: "WZORA", targets: ".hero-word-layer span", frames: RISE, duration: 1000, stagger: 70 },
+  { label: "Tagline", targets: ".hero-tagline", frames: WIPE, duration: 700 },
+];
+
+const OTHER_PAGE_PIECES: Piece[] = [
+  ...HEADER_PIECES,
+  { label: "Page", targets: ".page > *", frames: UP, duration: 800, stagger: 100 },
+];
+
+// The details that appear once the log has cleared away.
+const LAST_DETAILS = ".polytope-name, .scroll-cue > span, .site-footer";
 
 /** Plays the start-up again, here and now. */
 export function replayStartup() {
@@ -76,9 +133,12 @@ export function BootScreen() {
   const [run, setRun] = useState(0); // 0 = this page load; 1… = replays
   const [visible, setVisible] = useState(true);
   const [stage, setStage] = useState<"load" | "startup">("load");
-  const [docking, setDocking] = useState(false);
+  const [ownShape, setOwnShape] = useState(false); // build a shape here (not on the front page)
+  const [creating, setCreating] = useState(false); // the page is being created
+  const [settled, setSettled] = useState(false); // the log has done its job
   const [leaving, setLeaving] = useState(false);
-  const [step, setStep] = useState(0);
+  const [log, setLog] = useState<string[]>([]);
+  const [step, setStep] = useState(0); // log lines shown so far
   const rootRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLSpanElement>(null);
@@ -88,9 +148,12 @@ export function BootScreen() {
     const replay = () => {
       if (rootRef.current) return; // already showing
       setStage("load");
-      setStep(0);
-      setDocking(false);
+      setOwnShape(false);
+      setCreating(false);
+      setSettled(false);
       setLeaving(false);
+      setLog([]);
+      setStep(0);
       setVisible(true);
       setRun((r) => r + 1);
     };
@@ -115,7 +178,6 @@ export function BootScreen() {
     }
     const mode = !reducedMotion && (run > 0 || html.dataset.boot === "startup") ? "startup" : "load";
     html.dataset.boot = mode;
-    if (run > 0) window.scrollTo({ top: 0, behavior: "instant" });
 
     let frame = 0;
     let done = false;
@@ -145,7 +207,6 @@ export function BootScreen() {
     };
 
     // ── Start-up ──
-    const [vw, vh] = [window.innerWidth, window.innerHeight];
     let dpr = 1;
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -154,147 +215,110 @@ export function BootScreen() {
     };
     let rgb = readColor();
     let startAt = 0;
-    let barFrom = { x: vw / 2, y: vh / 2, half: 80 };
+    let pieces: Piece[] = [];
+    let times: number[] = []; // when each log line appears
     let shownStep = 0;
-    let built = false;
-    // Where the tesseract finishes: the front page's 4D shape, if it is showing.
-    let dockTo = { x: vw / 2, y: vh / 2, size: 0 };
+    let created = false;
+    let isSettled = false;
+    let barFrom = { x: 0, y: 0, half: 0 };
+    let dotTo = { x: 0, y: 0 }; // where the shape grows from: the centre of where it will stand
 
-    // A tesseract's 16 corners are the binary numbers 0000–1111: bit k says
-    // which side of axis k (x, y, z, w) the corner is on. Its 32 edges join
-    // corners that differ in a single bit.
-    const corners = Array.from({ length: 16 }, (_, v) => [0, 1, 2, 3].map((k) => ((v >> k) & 1 ? 1 : -1)));
-
-    const drawStartup = (s: number) => {
-      const W = canvas.width;
-      const H = canvas.height;
-      ctx.clearRect(0, 0, W, H);
+    // The loading bar shrinks into a dot and moves to where the shape will grow.
+    const drawCollapse = (s: number) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (s >= COLLAPSE) return;
       const [r, g, b] = rgb;
-      const ink = (a: number) => `rgba(${r},${g},${b},${a.toFixed(3)})`;
-      let cx = W / 2;
-      let cy = H / 2;
-      let alpha = 1;
+      const u = ease(s / COLLAPSE);
+      const x = (barFrom.x + (dotTo.x - barFrom.x) * u) * dpr;
+      const y = (barFrom.y + (dotTo.y - barFrom.y) * u) * dpr;
+      const half = barFrom.half * (1 - u) * dpr;
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x - half, y - dpr, half * 2, 2 * dpr);
+      ctx.beginPath();
+      // Ends the size of the shape's own point, which takes over from here.
+      ctx.arc(x, y, 2.2 * dpr * u, 0, Math.PI * 2);
+      ctx.fill();
+    };
 
-      // The loading bar, collapsing into a dot as it moves to the centre.
-      if (s < COLLAPSE) {
-        const u = ease(s / COLLAPSE);
-        const x = (barFrom.x + (vw / 2 - barFrom.x) * u) * dpr;
-        const y = (barFrom.y + (vh / 2 - barFrom.y) * u) * dpr;
-        const half = barFrom.half * (1 - u) * dpr;
-        ctx.fillStyle = ink(1);
-        ctx.fillRect(x - half, y - 0.5 * dpr, half * 2, dpr);
-        ctx.beginPath();
-        ctx.arc(x, y, 3 * dpr * u, 0, Math.PI * 2);
-        ctx.fill();
-        return;
-      }
-
-      // Each dimension k opens up in turn. Its new edges grow one after
-      // another: edge j along axis k joins the jth corner built so far to its copy.
-      const opened = (k: number, j: number) => {
-        const start = AXES_START + k * AXIS;
-        const count = 1 << k;
-        const gap = count > 1 ? (AXIS - GROW) / (count - 1) : 0;
-        return ease((s - start - j * gap) / GROW);
-      };
-      const dims = Math.max(0, Math.min(4, Math.floor((s - AXES_START) / AXIS) + 1));
-      const count = 1 << dims;
-
-      // Turn it slowly in 3D from the start, and through the 4th dimension once it has one.
-      const t = s - AXES_START;
-      const a = 0.25 + 0.42 * Math.max(0, t);
-      const tilt = 0.12 + 0.38 * ease(t / 3);
-      const w4 = Math.max(0, s - (AXES_START + 3 * AXIS));
-      const c1 = 0.5 * w4 * ease(w4 / 1.5);
-      const c2 = 0.27 * w4 * ease(w4 / 1.5);
-      let unit = Math.min(W * 0.16, H * 0.12);
-
-      if (s > DOCK_START) {
-        const u = ease((s - DOCK_START) / DOCK);
-        cx += (dockTo.x * dpr - cx) * u;
-        cy += (dockTo.y * dpr - cy) * u;
-        unit += ((dockTo.size * dpr) / 4 - unit) * u;
-        alpha = 1 - u;
-      }
-
-      const [ca, sa, cb, sb] = [Math.cos(a), Math.sin(a), Math.cos(tilt), Math.sin(tilt)];
-      const [c1c, c1s, c2c, c2s] = [Math.cos(c1), Math.sin(c1), Math.cos(c2), Math.sin(c2)];
-      const pts = corners.slice(0, count).map((c, v) => {
-        // Spread along each opened axis by how far that corner's edge has grown.
-        const q = c.map((side, k) => (k < dims ? side * opened(k, v & ((1 << k) - 1)) : 0));
-        let [x, y, z, w] = q;
-        [x, w] = [x * c1c - w * c1s, x * c1s + w * c1c];
-        [y, w] = [y * c2c - w * c2s, y * c2s + w * c2c];
-        const k4 = 4 / (4 - w);
-        x *= k4;
-        y *= k4;
-        z *= k4;
-        [x, z] = [x * ca + z * sa, -x * sa + z * ca];
-        [y, z] = [y * cb - z * sb, y * sb + z * cb];
-        const k3 = 6 / (6 - z);
-        return { x: cx + x * k3 * unit, y: cy + y * k3 * unit, z };
-      });
-
-      ctx.lineWidth = dpr;
-      ctx.lineCap = "butt";
-      for (let v = 0; v < count; v++) {
-        for (let k = 0; k < dims; k++) {
-          const u = v ^ (1 << k);
-          if (u < v) continue;
-          const depth = (pts[v].z + pts[u].z) / 2;
-          ctx.strokeStyle = ink(alpha * (0.55 + 0.35 * clamp01(0.5 + depth / 3)));
-          ctx.beginPath();
-          ctx.moveTo(pts[v].x, pts[v].y);
-          ctx.lineTo(pts[u].x, pts[u].y);
-          ctx.stroke();
-        }
-      }
-      ctx.fillStyle = ink(alpha);
-      const pulse = dims === 0 ? 1 + 0.25 * Math.sin((s - COLLAPSE) * 9) : 1;
-      for (const pt of pts) {
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 2.6 * dpr * pulse, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    // Each piece appears in turn; every element starts hidden until its moment.
+    const createPage = () => {
+      const animate = (targets: string, frames: Keyframe[], delay: number, duration: number, stagger: number) =>
+        document.querySelectorAll<HTMLElement>(targets).forEach((el, j) => {
+          if (el.closest(".boot")) return;
+          const order = Number(el.style.getPropertyValue("--i") || j);
+          el.animate(frames, {
+            duration,
+            delay: delay + order * stagger,
+            easing: "cubic-bezier(0.2, 0.7, 0.1, 1)",
+            fill: "backwards",
+          });
+        });
+      pieces.forEach((piece, i) =>
+        animate(piece.targets, piece.frames, i * STEP * 1000, piece.duration ?? 600, piece.stagger ?? 0),
+      );
+      animate(LAST_DETAILS, FADE, (pieces.length * STEP + SETTLE) * 1000, 700, 0);
     };
 
     const beginStartup = () => {
       try {
         localStorage.setItem(STORAGE_KEY, "1");
       } catch {}
+      const front = document.querySelector<HTMLElement>("[data-scroll-track] .hero-shape");
+      if (front) window.scrollTo({ top: 0, behavior: "instant" });
       const br = bar.getBoundingClientRect();
       barFrom = { x: br.left + br.width / 2, y: br.top + br.height / 2, half: br.width / 2 };
+      // The front page's shape fills the screen below the header; one of our own fills it all.
+      const box = front?.getBoundingClientRect();
+      dotTo = box
+        ? { x: box.left + box.width / 2, y: box.top + HEADER + (box.height - HEADER) / 2 }
+        : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+      pieces = front ? FRONT_PAGE_PIECES : OTHER_PAGE_PIECES;
+      const lines: [string, number][] = [
+        ["System start-up", 0],
+        ["0D · Point", COLLAPSE],
+        ["1D · Line", COLLAPSE + POINT],
+        ["2D · Square", COLLAPSE + POINT + AXIS],
+        ["3D · Cube", COLLAPSE + POINT + 2 * AXIS],
+        ["4D · Tesseract", COLLAPSE + POINT + 3 * AXIS],
+        ...pieces.map((piece, i): [string, number] => [piece.label, CREATE + i * STEP]),
+        ["WZORA online", CREATE + pieces.length * STEP],
+      ];
+      times = lines.map(([, at]) => at);
+      setLog(lines.map(([line]) => line));
+      setOwnShape(!front);
+
       resize();
       window.addEventListener("resize", resize);
       setStage("startup");
       startAt = performance.now();
+      startShapeBuild(startAt + COLLAPSE * 1000);
     };
 
     const startupFrame = (now: number) => {
       const s = (now - startAt) / 1000;
-      // The log gains a line as each stage begins.
-      const nextStep =
-        s < COLLAPSE ? 0 : s < AXES_START ? 1 : s < HOLD_START ? 2 + Math.floor((s - AXES_START) / AXIS) : 6;
-      if (nextStep !== shownStep) {
-        shownStep = nextStep;
-        setStep(nextStep);
+      let shown = shownStep;
+      while (shown < times.length && s >= times[shown]) shown++;
+      if (shown !== shownStep) {
+        shownStep = shown;
+        setStep(shown);
       }
-      if (!built && s >= DOCK_START) {
-        built = true;
-        // The shape fills the screen below the header, less a margin.
-        const shape = document.querySelector<HTMLElement>('[data-scene="hero"] > .hero-shape');
-        const box = shape?.getBoundingClientRect();
-        if (box && box.height > HEADER && box.bottom > 0 && box.top < vh)
-          dockTo = {
-            x: box.left + box.width / 2,
-            y: box.top + HEADER + (box.height - HEADER) / 2,
-            size: Math.min(box.width, box.height - HEADER) - 60,
-          };
+      drawCollapse(s);
+      if (!created && s >= CREATE) {
+        created = true;
         html.dataset.boot = "built";
-        setDocking(true);
+        createPage();
+        setCreating(true);
       }
-      drawStartup(s);
-      if (s >= DOCK_START + DOCK) leave("built", 0);
+      const online = CREATE + pieces.length * STEP;
+      if (!isSettled && s >= online + SETTLE) {
+        isSettled = true;
+        setSettled(true);
+      }
+      if (s >= online + SETTLE + OUTRO) {
+        endShapeBuild();
+        leave("built", 0);
+      }
     };
 
     const loop = (now: number) => {
@@ -329,6 +353,7 @@ export function BootScreen() {
     return () => {
       cancelAnimationFrame(frame);
       timers.forEach(clearTimeout);
+      endShapeBuild();
       mo.disconnect();
       window.removeEventListener("load", onLoad);
       window.removeEventListener("resize", resize);
@@ -337,12 +362,10 @@ export function BootScreen() {
 
   if (!visible) return null;
 
+  const classes = ["boot", creating && "is-creating", settled && "is-settled", leaving && "is-leaving"];
+  const first = Math.max(0, step - LOG_LINES);
   return (
-    <div
-      className={`boot${docking ? " is-docking" : ""}${leaving ? " is-leaving" : ""}`}
-      ref={rootRef}
-      data-stage={stage}
-    >
+    <div className={classes.filter(Boolean).join(" ")} ref={rootRef} data-stage={stage}>
       <div className="boot-center">
         <Logo className="boot-logo" />
         <div
@@ -357,12 +380,13 @@ export function BootScreen() {
           <span className="boot-bar-fill" ref={fillRef} />
         </div>
       </div>
+      {ownShape && <Polytope4D className="boot-shape" shape="tesseract" build />}
       <canvas className="boot-canvas" ref={canvasRef} aria-hidden="true" />
       <ol className="boot-log" aria-hidden="true">
-        {LOG.slice(0, stage === "startup" ? step + 1 : 0).map((line, i) => (
+        {log.slice(first, step).map((line, i) => (
           <li key={line}>
             <span>{line}</span>
-            <span className="boot-log-status">{i < step || i === LOG.length - 1 ? "OK" : "··"}</span>
+            <span className="boot-log-status">{first + i < step - 1 || step === log.length ? "OK" : "··"}</span>
           </li>
         ))}
       </ol>

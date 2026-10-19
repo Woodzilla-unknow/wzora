@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AXIS, POINT, SHAPE_BUILT, edgeGrowth, openAxes, shapeBuildTime } from "@/components/startup";
 
 /*
  * A wireframe 4D polytope, turning continuously in four dimensions and
@@ -24,6 +25,11 @@ import { useEffect, useRef, useState } from "react";
  * they are fighting over the surface. Wherever a white region passes behind
  * the `revealSelector` element (the solid WZORA layer), that part of it shows
  * through a clip path.
+ *
+ * With `build`, the shape takes part in the first-visit start-up: while it
+ * runs, a tesseract builds itself here from a single point, one dimension at
+ * a time (see startup.ts), sized and lit exactly as the finished shape, so
+ * the start-up ends in the shape that then simply carries on turning.
  */
 
 type Vec4 = [number, number, number, number];
@@ -62,6 +68,15 @@ for (const v of [[1, 1, 1, -W5], [1, -1, -1, -W5], [-1, 1, -1, -W5], [-1, -1, 1,
 const axisVertex = (axis: number, sign: number) => axis * 2 + (sign > 0 ? 0 : 1);
 const halfVertex = (bits: number) => 8 + bits;
 const simplexVertex = (i: number) => 24 + i;
+const isHalfVertex = (i: number) => i >= 8 && i < 24;
+
+// The tesseract's corner `bits` part-way through the start-up's build: along
+// each axis already opening, as far out as its edge has grown; flat on the rest.
+const builtCorner = (bits: number, s: number, axes: number) =>
+  VERTICES[halfVertex(bits)].map((c, k) => (k < axes ? c * edgeGrowth(s, k, bits & ((1 << k) - 1)) : 0)) as Vec4;
+
+// The first square of the build (corners 00, 01, 11, 10), whose face fills with dots.
+const BUILD_SQUARE = [0, 1, 3, 2].map(halfVertex);
 
 /**
  * One closed walk that uses every edge exactly once (every vertex here has even
@@ -195,9 +210,19 @@ type Props = {
   fitTop?: number;
   /** While false (hidden behind another scene), the shape pauses. */
   active?: boolean;
+  /** Build itself in step with the first-visit start-up whenever one is running. */
+  build?: boolean;
 };
 
-export function Polytope4D({ className, shape, fitSelector, revealSelector, fitTop = 0, active = true }: Props) {
+export function Polytope4D({
+  className,
+  shape,
+  fitSelector,
+  revealSelector,
+  fitTop = 0,
+  active = true,
+  build = false,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const readoutRef = useRef<HTMLSpanElement>(null);
   const [name, setName] = useState("");
@@ -206,6 +231,8 @@ export function Polytope4D({ className, shape, fitSelector, revealSelector, fitT
   const fitRef = useRef(fitSelector);
   const activeRef = useRef(active);
   activeRef.current = active;
+  const buildRef = useRef(build);
+  buildRef.current = build;
   const controls = useRef<{ setShape: (id: ShapeId) => void } | null>(null);
   shapeRef.current = shape;
   fitRef.current = fitSelector;
@@ -290,6 +317,7 @@ export function Polytope4D({ className, shape, fitSelector, revealSelector, fitT
     let visible = true;
     let t = reducedMotion ? 2.2 : 0;
     let last = performance.now();
+    let wasBuilding = false;
 
     // Low-res grid, one cell per dot, that the white regions are drawn into.
     const field = document.createElement("canvas");
@@ -349,17 +377,43 @@ export function Polytope4D({ className, shape, fitSelector, revealSelector, fitT
       ctx.clearRect(0, 0, w, h);
       const [r, g, b] = rgb;
 
+      // The start-up's build, if one is running: `s` seconds in, `axes` axes opening.
+      const s = buildRef.current ? shapeBuildTime(performance.now()) : null;
+      const building = s !== null && s < SHAPE_BUILT;
+      if (building && !wasBuilding) {
+        setShape("tesseract", true);
+        snapFit = true;
+      }
+      wasBuilding = building;
+      if (building && s < 0) {
+        // Not yet: the start-up screen is still turning its loading bar into the point.
+        if (reveal) reveal.style.opacity = "0";
+        return;
+      }
+      const axes = building ? openAxes(s) : 4;
+
       vertexPresence.fill(0);
-      for (let e = 0; e < E; e++) {
-        eased[e] = easeInOut(presence[e]);
-        const [a, c] = edges[e];
-        vertexPresence[a] = Math.max(vertexPresence[a], eased[e]);
-        vertexPresence[c] = Math.max(vertexPresence[c], eased[e]);
+      if (building) {
+        // Only the part built so far: the corners (and edges between them) whose
+        // bits use the opened axes alone.
+        const corners = 1 << axes;
+        for (let e = 0; e < E; e++) {
+          const [a, c] = edges[e];
+          eased[e] = shapeEdges.tesseract.has(e) && a - 8 < corners && c - 8 < corners ? 1 : 0;
+        }
+        for (let bits = 0; bits < corners; bits++) vertexPresence[halfVertex(bits)] = 1;
+      } else {
+        for (let e = 0; e < E; e++) {
+          eased[e] = easeInOut(presence[e]);
+          const [a, c] = edges[e];
+          vertexPresence[a] = Math.max(vertexPresence[a], eased[e]);
+          vertexPresence[c] = Math.max(vertexPresence[c], eased[e]);
+        }
       }
 
       // Rotate in 4D, then perspective-project 4D → 3D → 2D (in units for now).
       const tilt = 0.45 + Math.sin(t * 0.2) * 0.15;
-      const unit = VERTICES.map((src) => {
+      const project = (src: Vec4) => {
         const v = [...src] as Vec4;
         rotate(v, 0, 3, t * 0.31); // XW
         rotate(v, 1, 3, t * 0.23); // YW
@@ -375,13 +429,18 @@ export function Polytope4D({ className, shape, fitSelector, revealSelector, fitT
         y = y2;
         const k3 = 6 / (6 - z);
         return { u: x * k3, v: y * k3, X: x, Y: y, Z: z, W: v[3] };
-      });
+      };
+      const full = VERTICES.map(project);
+      const unit = building
+        ? VERTICES.map((src, i) => (isHalfVertex(i) ? project(builtCorner(i - 8, s, axes)) : full[i]))
+        : full;
 
       // Auto-fit: scale and move the shape's current outline into the fit box.
+      // While building, fit the finished tesseract, so the build grows into its size.
       let ex = 0.3;
       let ey = 0.3;
-      unit.forEach((p, i) => {
-        if (vertexPresence[i] < 0.05) return;
+      full.forEach((p, i) => {
+        if ((building ? Number(isHalfVertex(i)) : vertexPresence[i]) < 0.05) return;
         ex = Math.max(ex, Math.abs(p.u));
         ey = Math.max(ey, Math.abs(p.v));
       });
@@ -406,16 +465,26 @@ export function Polytope4D({ className, shape, fitSelector, revealSelector, fitT
 
       // The white regions belong to whichever shape is most present. Mid-morph,
       // they fade out and back in as one shape hands over to the next.
-      let best: ShapeId = ids[0];
-      let bestPresence = -1;
-      for (const id of ids) {
-        let sum = 0;
-        for (const e of shapeEdges[id]) sum += eased[e];
-        const p = sum / shapeEdges[id].size;
-        if (p > bestPresence) [best, bestPresence] = [id, p];
+      let circuit: number[];
+      let strength: number;
+      if (building) {
+        // While building: the square fills with dots, the cube is bare wire (its
+        // square's dots fading), and the tesseract's checkerboard emerges as its
+        // two cubes pull apart.
+        circuit = axes < 4 ? BUILD_SQUARE : circuits.tesseract;
+        strength = axes < 2 ? 0 : axes === 3 ? 1 - smoothstep(0, 0.6, s - POINT - 2 * AXIS) : 1;
+      } else {
+        let best: ShapeId = ids[0];
+        let bestPresence = -1;
+        for (const id of ids) {
+          let sum = 0;
+          for (const e of shapeEdges[id]) sum += eased[e];
+          const p = sum / shapeEdges[id].size;
+          if (p > bestPresence) [best, bestPresence] = [id, p];
+        }
+        strength = Math.max(0, Math.min(1, bestPresence * 2 - 1));
+        circuit = circuits[best];
       }
-      const strength = Math.max(0, Math.min(1, bestPresence * 2 - 1));
-      const circuit = circuits[best];
       const regions = new Path2D();
       circuit.forEach((i, k) => {
         const { x, y } = projected[i];

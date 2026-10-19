@@ -10,11 +10,13 @@ Official information website for WZORA, built with Next.js.
   WZORA).
 - **Loading screen:** opening or refreshing the site shows the W/Z mark with a loading
   bar under it until the page is ready (moving between pages skips it).
-- **Start-up:** a first-time visitor then sees the bar collapse into a dot that builds a
-  4D shape one dimension at a time (point, line, square, cube, tesseract), which grows
-  into the front page's shape as the site assembles itself piece by piece. It plays
-  once per browser; clicking the W/Z logo in the header three times plays it again.
-  Both live in `src/components/Boot.tsx`.
+- **Start-up:** a first-time visitor then sees the bar collapse into a dot, and the front
+  page's own 4D shape grows out of it one dimension at a time (point, line, square,
+  cube, tesseract), dots filling its faces as it goes. Then the system creates the page
+  around it piece by piece (header, logo, search, site map, theme switch, frame, 3D
+  mark, WZORA), logging each one as it comes online. It plays once per browser;
+  clicking the W/Z logo in the header three times plays it again. See
+  `src/components/Boot.tsx` and `src/components/startup.ts`.
 - **Section pages:** every section has its own page at `/<id>` (`/about`, `/legal`, …).
 - **Company pages:** every company WZORA owns has its own page at `/companies/<id>`
   (for example `/companies/kairowz`).
