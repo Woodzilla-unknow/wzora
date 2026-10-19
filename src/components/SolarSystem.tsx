@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { companyHref, type Company } from "@/content/site";
 
 /*
@@ -211,7 +211,7 @@ export function SolarSystem({ companies, className, active = true, onSun }: Prop
       <canvas ref={frontRef} className="solar-canvas is-front" aria-hidden="true" />
       <ul className="solar-planets" aria-label="Companies">
         {companies.map((c, i) => (
-          <li key={c.id}>
+          <li key={c.id} style={{ "--i": i } as CSSProperties}>
             <a
               ref={(el) => {
                 planetRefs.current[i] = el;

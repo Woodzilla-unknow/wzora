@@ -1298,6 +1298,7 @@ html:has([data-scroll-track]) {
   display: inline-block;
   -webkit-text-stroke: clamp(1px, 0.12vw, 2px) var(--fg);
   animation: rise 1.1s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+  animation-delay: calc(0.5s + var(--i, 0) * 0.08s);
 }
 
 /* Wire letters, filled with the background so the shape's lines don't show through. */
@@ -1696,6 +1697,314 @@ html:has([data-scroll-track]) {
   height: 22px;
   width: auto;
   color: var(--fg);
+}
+
+.footer-replay {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.footer-replay:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+/* ───────────────────────── Loading screen & start-up ───────────────────────── */
+
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  color: var(--fg);
+  transition: opacity 0.5s ease, background-color 0.8s ease;
+}
+
+html[data-boot="off"] .boot,
+html[data-boot="fallback"] .boot {
+  display: none;
+}
+
+/* Behind the screen the page stays put, its entrance animations unplayed. */
+html[data-boot="load"],
+html[data-boot="startup"] {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+html[data-boot="load"] body *,
+html[data-boot="startup"] body * {
+  animation-play-state: paused !important;
+}
+
+html[data-boot] .boot,
+html[data-boot] .boot * {
+  animation-play-state: running !important;
+}
+
+.boot.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* As the tesseract settles, the screen clears and the page builds itself. */
+.boot.is-docking {
+  background-color: transparent;
+  pointer-events: none;
+}
+
+.boot-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  transition: opacity 0.35s ease;
+}
+
+.boot-logo {
+  width: clamp(88px, 14vw, 132px);
+  height: auto;
+  animation: boot-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes boot-breathe {
+  50% { opacity: 0.6; }
+}
+
+.boot-bar {
+  position: relative;
+  width: clamp(120px, 18vw, 180px);
+  height: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+/* Creeps forward on its own until the script takes over with real progress. */
+.boot-bar-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--fg);
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: boot-creep 1.6s cubic-bezier(0.2, 0.7, 0.1, 1) forwards;
+}
+
+.boot-bar-fill.is-live {
+  animation: none;
+}
+
+@keyframes boot-creep {
+  to { transform: scaleX(0.3); }
+}
+
+/* The start-up draws on the canvas: the bar hands over to it at once. */
+.boot[data-stage="startup"] .boot-center {
+  opacity: 0;
+}
+
+.boot[data-stage="startup"] .boot-bar {
+  visibility: hidden;
+}
+
+.boot-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.boot-log {
+  position: absolute;
+  left: var(--gutter);
+  bottom: 32px;
+  width: min(300px, calc(100% - 2 * var(--gutter)));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: opacity 0.4s ease;
+}
+
+.boot-log li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  animation: fade 0.3s ease both;
+}
+
+.boot-log li::before {
+  content: "›";
+  color: var(--fg);
+}
+
+.boot-log li > span:first-child {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.boot-log li > span:first-child::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px dotted var(--line-strong);
+}
+
+.boot-log-status {
+  color: var(--fg);
+}
+
+.boot-skip {
+  position: absolute;
+  top: 18px;
+  right: var(--gutter);
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.boot[data-stage="startup"] .boot-skip {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.boot-skip:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+.boot.is-docking .boot-log,
+.boot.is-docking .boot-skip {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* After the start-up the page assembles piece by piece: the header, the sun,
+   the corners, the rings, each planet, the letters of WZORA, then the rest.
+   Every piece has its own animation name here, so a replay plays them again. */
+html[data-boot="built"] .site-header {
+  animation: build-header 0.8s ease 0.1s both;
+}
+
+html[data-boot="built"] :is(.brand, .header-center > *, .theme-toggle) {
+  animation: build-down 0.7s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+}
+
+html[data-boot="built"] .brand { animation-delay: 0.15s; }
+html[data-boot="built"] .header-center > :nth-child(1) { animation-delay: 0.25s; }
+html[data-boot="built"] .header-center > :nth-child(2) { animation-delay: 0.35s; }
+html[data-boot="built"] .theme-toggle { animation-delay: 0.45s; }
+
+html[data-boot="built"] .logo3d {
+  animation: build-pop 1s cubic-bezier(0.2, 0.7, 0.1, 1) 0.3s both;
+}
+
+html[data-boot="built"] .hero-corner {
+  animation: build-corner 0.6s cubic-bezier(0.2, 0.7, 0.1, 1) 0.6s both;
+}
+
+.hero-corner.tl { transform-origin: top left; }
+.hero-corner.tr { transform-origin: top right; }
+.hero-corner.bl { transform-origin: bottom left; }
+.hero-corner.br { transform-origin: bottom right; }
+
+html[data-boot="built"] .solar {
+  animation: none;
+}
+
+html[data-boot="built"] .solar-canvas {
+  animation: build-ring 1.3s cubic-bezier(0.3, 0.6, 0.2, 1) 0.7s both;
+}
+
+html[data-boot="built"] :is(.planet-disc, .planet-label) {
+  animation: build-pop 0.7s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+  animation-delay: calc(1.3s + var(--i, 0) * 0.15s);
+}
+
+html[data-boot="built"] .hero-word-layer span {
+  animation-name: build-rise;
+  animation-delay: calc(1.5s + var(--i, 0) * 0.08s);
+}
+
+html[data-boot="built"] .hero-tagline {
+  animation: build-fade 0.9s ease 2.1s both;
+}
+
+html[data-boot="built"] .scroll-cue > span {
+  animation: build-fade 0.8s ease 2.4s both;
+}
+
+html[data-boot="built"] .page > * {
+  animation: build-up 0.8s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+  animation-delay: 0.9s;
+}
+
+html[data-boot="built"] .page > :nth-child(1) { animation-delay: 0.5s; }
+html[data-boot="built"] .page > :nth-child(2) { animation-delay: 0.6s; }
+html[data-boot="built"] .page > :nth-child(3) { animation-delay: 0.7s; }
+html[data-boot="built"] .page > :nth-child(4) { animation-delay: 0.8s; }
+
+@keyframes build-header {
+  from { background-color: transparent; border-bottom-color: transparent; }
+}
+
+@keyframes build-down {
+  from { filter: opacity(0); translate: 0 -10px; }
+}
+
+@keyframes build-up {
+  from { filter: opacity(0); translate: 0 14px; }
+}
+
+@keyframes build-pop {
+  from { filter: opacity(0); scale: 0.25; }
+}
+
+@keyframes build-corner {
+  from { filter: opacity(0); scale: 0; }
+}
+
+@keyframes build-ring {
+  from { clip-path: circle(0% at 50% 50%); }
+  to { clip-path: circle(75% at 50% 50%); }
+}
+
+@keyframes build-fade {
+  from { filter: opacity(0); }
+}
+
+@keyframes build-rise {
+  from { transform: translateY(105%); }
+  to { transform: none; }
 }
 
 /* ───────────────────────── Motion preferences ───────────────────────── */

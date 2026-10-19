@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { Body } from "@/components/Placeholder";
 import { Logo3D } from "@/components/Logo3D";
 import { Polytope4D, type ShapeId } from "@/components/Polytope4D";
@@ -123,7 +123,7 @@ export function HeroScenes({ sections }: { sections: Section[] }) {
           {(["outline", "solid"] as const).map((layer) => (
             <span key={layer} className={`hero-word-layer hero-word-${layer}`} aria-hidden="true">
               {site.name.split("").map((ch, i) => (
-                <span key={i} style={{ animationDelay: `${0.5 + i * 0.08}s` }}>
+                <span key={i} style={{ "--i": i } as CSSProperties}>
                   {ch}
                 </span>
               ))}

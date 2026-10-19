@@ -8,6 +8,12 @@ Official information website for WZORA, built with Next.js.
   ("WZORA.about", "WZORA.mission", …), where a wireframe 4D shape turns inside a frame
   and the spinning mark shrinks into the top-right corner (scrolling back, or clicking
   it, grows it back into the sun).
+- **Loading screen:** opening or refreshing the site shows the W/Z mark with a loading
+  bar under it until the page is ready (moving between pages skips it).
+- **Start-up:** a first-time visitor then sees the bar collapse into a dot that builds a
+  4D shape one dimension at a time (point, line, square, cube, tesseract) before the
+  site assembles itself piece by piece. It plays once per browser; "Replay start-up"
+  in the footer plays it again. Both live in `src/components/Boot.tsx`.
 - **Section pages:** every section has its own page at `/<id>` (`/about`, `/legal`, …).
 - **Company pages:** every company WZORA owns has its own page at `/companies/<id>`
   (for example `/companies/kairowz`).
