@@ -1873,39 +1873,8 @@ html[data-boot] .boot * {
   color: var(--fg);
 }
 
-.boot-skip {
-  position: absolute;
-  top: 18px;
-  right: var(--gutter);
-  padding: 7px 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: none;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  cursor: pointer;
+.boot.is-docking .boot-log {
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.boot[data-stage="startup"] .boot-skip {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.boot-skip:hover {
-  color: var(--fg);
-  border-color: var(--fg);
-}
-
-.boot.is-docking .boot-log,
-.boot.is-docking .boot-skip {
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* After the start-up the page assembles piece by piece: the header, the sun,

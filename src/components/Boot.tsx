@@ -75,7 +75,6 @@ export function BootScreen() {
   const barRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLSpanElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const skipRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const replay = () => {
@@ -314,22 +313,12 @@ export function BootScreen() {
     const mo = new MutationObserver(updateColor);
     mo.observe(html, { attributes: true, attributeFilter: ["data-theme"] });
 
-    skipRef.current = () => {
-      try {
-        localStorage.setItem(STORAGE_KEY, "1");
-      } catch {}
-      leave(mode === "startup" ? "built" : "done", 400);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && startAt > 0 && skipRef.current();
-    window.addEventListener("keydown", onKey);
-
     return () => {
       cancelAnimationFrame(frame);
       timers.forEach(clearTimeout);
       mo.disconnect();
       window.removeEventListener("load", onLoad);
       window.removeEventListener("resize", resize);
-      window.removeEventListener("keydown", onKey);
     };
   }, [run, visible]);
 
@@ -364,9 +353,6 @@ export function BootScreen() {
           </li>
         ))}
       </ol>
-      <button type="button" className="boot-skip" onClick={() => skipRef.current()} tabIndex={stage === "startup" ? 0 : -1}>
-        Skip
-      </button>
     </div>
   );
 }
