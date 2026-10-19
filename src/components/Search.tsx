@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { hrefFor, PLACEHOLDER, type Section } from "@/content/site";
 import { useOverlay } from "./overlay";
 
@@ -162,7 +163,9 @@ export function Search({ sections }: { sections: Section[] }) {
         <kbd>{shortcut}</kbd>
       </button>
 
-      {open && (
+      {open &&
+        // Rendered on <body> so nothing in the header (its blur) can trap the panel.
+        createPortal(
         <div
           className="search-overlay"
           role="dialog"
@@ -252,8 +255,9 @@ export function Search({ sections }: { sections: Section[] }) {
               </span>
             </p>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }

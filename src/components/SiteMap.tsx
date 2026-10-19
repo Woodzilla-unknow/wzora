@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { hrefFor, site, type Section } from "@/content/site";
 import { useOverlay } from "./overlay";
 
@@ -151,7 +152,9 @@ export function SiteMap({ sections }: { sections: Section[] }) {
         <span className="search-trigger-label">Site map</span>
       </button>
 
-      {open && (
+      {open &&
+        // Rendered on <body> so nothing in the header (its blur) can trap the panel.
+        createPortal(
         <div
           className="search-overlay"
           role="dialog"
@@ -218,8 +221,9 @@ export function SiteMap({ sections }: { sections: Section[] }) {
               </span>
             </p>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }

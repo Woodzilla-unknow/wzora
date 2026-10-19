@@ -93,8 +93,8 @@ section[id] {
   height: 64px;
   padding: 0 var(--gutter);
   background: var(--header-bg);
-  backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
 }
 
@@ -248,8 +248,8 @@ kbd {
   justify-content: center;
   padding: max(80px, 12vh) var(--gutter) 24px;
   background: color-mix(in srgb, var(--bg) 86%, transparent);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   animation: fade 0.2s ease both;
 }
 
